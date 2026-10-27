@@ -18,3 +18,5 @@ backend/artifacts/*
 backend/data/
 *.log
 work/
+
+*.egg-info/

@@ -1,0 +1,14 @@
+fastapi<1,>=0.115
+uvicorn[standard]<1,>=0.34
+psycopg[binary,pool]<4,>=3.2
+pydantic-settings<3,>=2.7
+argon2-cffi<26,>=23.1
+httpx<1,>=0.28
+numpy<3,>=2.2
+scikit-learn<2,>=1.6
+joblib<2,>=1.4
+
+[dev]
+pytest<10,>=8
+pytest-asyncio<2,>=0.25
+ruff<1,>=0.11

@@ -1,0 +1,20 @@
+{
+  "name": "sentinel-sdn",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Measured SDN telemetry, machine learning detection, and a live defense console.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "infra:plan": "cd backend && npx --yes @railway/cli@5.71.0 config plan",
+    "infra:apply": "cd backend && npx --yes @railway/cli@5.71.0 config apply"
+  },
+  "devDependencies": {
+    "railway": "3.16.0"
+  }
+}

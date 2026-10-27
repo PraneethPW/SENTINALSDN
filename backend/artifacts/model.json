@@ -1,0 +1,102 @@
+{
+  "version": "rf-20261027T095201Z",
+  "algorithm": "Random Forest",
+  "features": [
+    "packet_rate",
+    "byte_rate",
+    "mean_packet_size",
+    "duration_seconds",
+    "protocol"
+  ],
+  "sklearn_version": "1.9.1",
+  "trained_at": "2026-10-27T09:52:01.298933+00:00",
+  "dataset_sha256": "5b5373b0ac4c0d5db4fa63e2fa5cf2158bb9941783d26c9b785d98a2ef06277a",
+  "rows": 19748,
+  "training_rows": 15698,
+  "test_rows": 4050,
+  "split": "group holdout, 25% test, seed 42",
+  "evaluation_threshold": 0.9,
+  "training_groups": 90,
+  "test_groups": 30,
+  "roc_auc": 0.989834442694839,
+  "average_precision": 0.9849295648198726,
+  "classification_report": {
+    "0": {
+      "precision": 0.7982366904035266,
+      "recall": 0.9953488372093023,
+      "f1-score": 0.8859616108392925,
+      "support": 2365.0
+    },
+    "1": {
+      "precision": 0.9900090826521344,
+      "recall": 0.6468842729970327,
+      "f1-score": 0.782483847810481,
+      "support": 1685.0
+    },
+    "accuracy": 0.8503703703703703,
+    "macro avg": {
+      "precision": 0.8941228865278306,
+      "recall": 0.8211165551031675,
+      "f1-score": 0.8342227293248867,
+      "support": 4050.0
+    },
+    "weighted avg": {
+      "precision": 0.87802347582054,
+      "recall": 0.8503703703703703,
+      "f1-score": 0.8429097514063177,
+      "support": 4050.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      2354,
+      11
+    ],
+    [
+      595,
+      1090
+    ]
+  ],
+  "feature_importance": {
+    "packet_rate": 0.2809727740032998,
+    "byte_rate": 0.33049005785422386,
+    "mean_packet_size": 0.12121612650947192,
+    "duration_seconds": 0.2427492230414111,
+    "protocol": 0.02457181859159336
+  },
+  "limitations": "Holdout metrics apply only to this dataset. Validate on your deployment network before mitigation. Measured traffic from a published Mininet lab, not a production network. Original capture IDs absent; endpoint-family grouping is a proxy, not an independent-capture evaluation. Historical rows are never inserted into live telemetry.",
+  "dataset": {
+    "title": "DDOS attack SDN Dataset",
+    "authors": [
+      "Nisha Ahuja",
+      "Gaurav Singal",
+      "Debajyoti Mukhopadhyay"
+    ],
+    "doi": "10.17632/jxpfjc64kr.1",
+    "url": "https://data.mendeley.com/datasets/jxpfjc64kr/1",
+    "download_url": "https://data.mendeley.com/public-api/zip/jxpfjc64kr/download/1",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "raw_sha256": "e0d9fa511e57b849bf15fbd1d0ac91a83bbd4ad55706eadffe077de6246e4dd3",
+    "prepared_sha256": "5b5373b0ac4c0d5db4fa63e2fa5cf2158bb9941783d26c9b785d98a2ef06277a",
+    "window_seconds": 30,
+    "grouping": "bidirectional endpoint pair + protocol, across all switches and times",
+    "feature_mapping": {
+      "packet_rate": "pktperflow / 30",
+      "byte_rate": "byteperflow / 30",
+      "mean_packet_size": "byteperflow / pktperflow",
+      "duration_seconds": "dur + dur_nsec / 1e9",
+      "protocol": "ICMP=1, TCP=6, UDP=17"
+    },
+    "cleaning_counts": {
+      "source_rows": 104345,
+      "accepted_rows": 19748,
+      "label_0": 13317,
+      "duplicate_observations_removed": 78760,
+      "invalid_or_idle_rows_removed": 5837,
+      "label_1": 6431
+    },
+    "limitations": "Measured traffic from a published Mininet lab, not a production network. Original capture IDs absent; endpoint-family grouping is a proxy, not an independent-capture evaluation. Historical rows are never inserted into live telemetry."
+  },
+  "window_seconds": 30
+}

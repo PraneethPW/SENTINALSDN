@@ -2277,12 +2277,14 @@ textarea::placeholder {
 }
 @media (max-width: 760px) {
   .sidebar {
+    visibility: hidden;
     transform: translateX(-100%);
     width: 238px;
     transition: transform 0.25s;
     padding-inline: 18px;
   }
   .sidebar.mobile-open {
+    visibility: visible;
     transform: translateX(0);
   }
   .main-shell {

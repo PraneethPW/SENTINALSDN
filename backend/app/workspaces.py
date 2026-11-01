@@ -4,7 +4,7 @@ import io
 import secrets
 from pathlib import Path
 from urllib.parse import urlsplit
-from uuid import uuid4
+from uuid import UUID, uuid4
 from zipfile import ZipFile, ZIP_DEFLATED
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -54,10 +54,11 @@ async def rename(body: WorkspaceName, user=Depends(administrator)):
     return row
 
 
-def collector_bundle(api_url: str, token: str) -> bytes:
+def collector_bundle(api_url: str, token: str, workspace_id) -> bytes:
     root = Path(__file__).resolve().parent.parent
     output = io.BytesIO()
     with ZipFile(output, "w", ZIP_DEFLATED) as archive:
+        archive.write(root / "collector/connect.py", "sentinel-network/connect.py")
         for filename in (
             "collector/__init__.py",
             "collector/agent.py",
@@ -75,7 +76,10 @@ def collector_bundle(api_url: str, token: str) -> bytes:
         archive.writestr("sentinel-network/.dockerignore", ".env\n.spool/\n.git/\n")
         archive.writestr(
             "sentinel-network/compose.yml",
-            """name: sentinel-personal-network
+            "name: sentinel-network-"
+            + UUID(str(workspace_id)).hex
+            + "\n"
+            + """\
 services:
   lab:
     build:
@@ -111,15 +115,19 @@ with bounded ICMP and 64 Kbit/s UDP traffic. It does not capture your Mac's norm
 traffic and does not attack an external target. No port is exposed to the host.
 
 1. Open a terminal in this extracted `sentinel-network` folder.
-2. `chmod 600 .env`
-3. `docker compose up -d --build` (first build downloads official dependencies).
+2. Ensure your Docker Linux engine or Colima VM is running.
+3. `python3 connect.py up` (first build downloads official dependencies).
+   The helper detects a running Docker context and either Compose command. It
+   does not change your global Docker settings. Every workspace has a unique
+   Compose project and spool volume, so it cannot reuse another workspace's lab.
 4. Return to Sentinel → Network setup. Watch collector, controller, and flow status.
    Allow about 60–90 seconds after the container starts for the first counter window.
-5. `docker compose logs --tail=60` checks startup. Collector output is inside the
-   container: `docker compose exec lab tail -40 /tmp/collector.log`.
-6. Stop this lab with `docker compose down`. Keep the Mac awake to keep telemetry live.
-   If your Docker installation uses the standalone command, use `docker-compose`
-   in place of `docker compose` in these commands.
+5. `python3 connect.py status` checks the container; `python3 connect.py logs`
+   shows the actual collector log. Use `--context NAME` to select a specific engine.
+6. Stop this lab with `python3 connect.py down`. Keep the Mac awake to keep telemetry live.
+   On Windows, use `python` if your installation has no `python3` command.
+   You may also use ordinary Docker Compose commands with your intended context
+   and this compose.yml; the helper supports standalone docker-compose on Macs.
 
 ## Option B — your existing SDN controller
 
@@ -158,7 +166,7 @@ async def download_setup(request: Request, user=Depends(administrator)):
     if origin.hostname in ("localhost", "127.0.0.1"):
         api_url = "http://host.docker.internal:8100"
     token = "snc_" + secrets.token_urlsafe(48)
-    bundle = collector_bundle(api_url, token)
+    bundle = collector_bundle(api_url, token, user["workspace_id"])
     async with db.connection() as conn:
         await conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (str(user["workspace_id"]),))
         active = await (

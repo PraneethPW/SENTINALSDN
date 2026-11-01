@@ -280,13 +280,15 @@ export default function NetworkSetup({
             Extract the ZIP, open its sentinel-network folder in a terminal, and
             follow README.md. To start the included lab with Docker:
           </p>
-          <pre>chmod 600 .env{"\n"}docker compose up -d --build</pre>
+          <pre>python3 connect.py up</pre>
           <p className="footnote">
-            If your installation uses the standalone command, use
-            docker-compose. The lab requires Linux containers with privileged
-            networking; it generates isolated lab traffic and does not capture
-            your normal computer traffic. For your own SDN, use the
-            existing-controller instructions in the README.
+            Start Docker Desktop or your Colima VM first. The helper selects a
+            working Docker context and Compose command, and keeps this
+            workspace’s lab separate. Use python3 connect.py status, logs, or
+            down to inspect or stop it. The lab requires privileged Linux
+            containers; it does not capture your normal computer traffic. For
+            your own SDN, use the existing-controller instructions in the
+            README.
           </p>
           <div className="setup-live-status" aria-live="polite">
             <Radio size={16} />

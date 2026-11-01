@@ -29,6 +29,11 @@ def setup(client, headers):
     with ZipFile(io.BytesIO(r.content)) as z:
         assert "sentinel-network/collector/agent.py" in z.namelist()
         assert "sentinel-network/lab/network.py" in z.namelist()
+        assert "sentinel-network/connect.py" in z.namelist()
+        wid = client.get("/api/workspace", headers=headers).json()["id"]
+        assert z.read("sentinel-network/compose.yml").decode().splitlines()[
+            0
+        ] == "name: sentinel-network-" + wid.replace("-", "")
         assert "DATABASE_URL" not in z.read("sentinel-network/.env").decode()
         env = dict(line.split("=", 1) for line in z.read("sentinel-network/.env").decode().splitlines())
     return {"Authorization": "Bearer " + env["COLLECTOR_TOKEN"]}, env["COLLECTOR_TOKEN"]

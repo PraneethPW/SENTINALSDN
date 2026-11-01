@@ -47,7 +47,8 @@ class PasswordChange(BaseModel):
 async def list_users(user=Depends(current_user)):
     # Operators need names for assignment; no password/session fields are exposed.
     return await db.fetch(
-        "SELECT id,email,role,active,approved,display_name,password_enabled,created_at FROM users ORDER BY created_at,id"
+        "SELECT id,email,role,active,approved,display_name,password_enabled,created_at FROM users WHERE workspace_id=%s ORDER BY created_at,id",
+        (user["workspace_id"],),
     )
 
 
@@ -59,8 +60,8 @@ async def create_user(body: NewUser, user=Depends(administrator)):
         if await (await conn.execute("SELECT 1 FROM users WHERE email=%s", (body.email,))).fetchone():
             raise HTTPException(409, "An account with this email already exists")
         result = await conn.execute(
-            "INSERT INTO users(id,email,password_hash,role) VALUES (%s,%s,%s,%s) RETURNING id,email,role,active",
-            (uuid4(), body.email, encoded, body.role),
+            "INSERT INTO users(id,email,password_hash,role,workspace_id) VALUES (%s,%s,%s,%s,%s) RETURNING id,email,role,active",
+            (uuid4(), body.email, encoded, body.role, user["workspace_id"]),
         )
         account = await result.fetchone()
         await db.audit(conn, user["id"], "user.created", account["id"], {"role": body.role})
@@ -72,7 +73,10 @@ async def change_user(user_id: UUID, body: ChangeUser, user=Depends(administrato
     async with db.connection() as conn:
         await conn.execute("SELECT pg_advisory_xact_lock(739142020)")
         target = await (
-            await conn.execute("SELECT * FROM users WHERE id=%s FOR UPDATE", (user_id,))
+            await conn.execute(
+                "SELECT * FROM users WHERE id=%s AND workspace_id=%s FOR UPDATE",
+                (user_id, user["workspace_id"]),
+            )
         ).fetchone()
         if not target:
             raise HTTPException(404, "Account not found")
@@ -85,7 +89,8 @@ async def change_user(user_id: UUID, body: ChangeUser, user=Depends(administrato
         ):
             count = await (
                 await conn.execute(
-                    "SELECT count(*) AS n FROM users WHERE role='admin' AND active AND approved"
+                    "SELECT count(*) AS n FROM users WHERE workspace_id=%s AND role='admin' AND active AND approved",
+                    (user["workspace_id"],),
                 )
             ).fetchone()
             if count["n"] <= 1:
@@ -127,10 +132,10 @@ async def flow_history(
     # Escape LIKE wildcards so search is a literal user string.
     term = "%" + search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     rows = await db.fetch(
-        """SELECT * FROM flows WHERE observed_at>now()-make_interval(mins=>%s)
+        """SELECT * FROM flows WHERE workspace_id=%s AND observed_at>now()-make_interval(mins=>%s)
         AND (%s::bigint IS NULL OR id<%s) AND (%s='all' OR prediction=%s)
         AND (source_ip::text ILIKE %s OR destination_ip::text ILIKE %s OR switch_id ILIKE %s)
         ORDER BY id DESC LIMIT %s""",
-        (minutes, cursor, cursor, verdict, verdict, term, term, term, limit + 1),
+        (user["workspace_id"], minutes, cursor, cursor, verdict, verdict, term, term, term, limit + 1),
     )
     return {"items": rows[:limit], "next_cursor": rows[limit - 1]["id"] if len(rows) > limit else None}

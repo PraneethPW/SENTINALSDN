@@ -26,14 +26,14 @@ Set these service variables through Railway's Variables UI, or a secure credenti
 | RETENTION_DAYS | 7 (configurable 1–90) |
 | OPENROUTER_API_KEY | optional provider key |
 | OPENROUTER_MODEL | openrouter/free |
-| REGISTRATION_ENABLED | true, with mandatory administrator approval |
+| REGISTRATION_ENABLED | true, creates isolated private workspaces |
 | GOOGLE_CLIENT_ID | Google OAuth web application client ID |
 | GOOGLE_CLIENT_SECRET | backend-only client secret |
 | GOOGLE_REDIRECT_URI | exact HTTPS API callback URL |
 
 No secrets are needed during image build. The Docker container runs as a non-root user. Railway provides `PORT`. Generate a Railway HTTPS domain and record it. Do not enable request logging of WebSocket query strings; tickets are one-use and expire after 30 seconds but are still credentials.
 
-Create the first account from a trusted environment using this project's admin CLI against Neon. For the CLI, enter the production URL securely into a local ignored environment file, or use Railway's authorized shell with the deployed image. Do not put passwords on command lines. There is no public registration endpoint.
+Create the first account from a trusted environment using this project's admin CLI against Neon. For the CLI, enter the production URL securely into a local ignored environment file, or use Railway's authorized shell with the deployed image. Do not put passwords on command lines. Public registration creates a separate private workspace; it never joins the existing research lab. The administrative CLI creates an account in the original research-lab workspace.
 
 ## Vercel frontend
 
@@ -54,3 +54,10 @@ Use the final Vercel origin in Railway's `CORS_ORIGINS`. Add individual preview 
 The running API automatically enforces retention after its first minute and hourly thereafter, with a PostgreSQL advisory lock across replicas. It clears expired sessions/tickets/attempts and audits each cleanup. For a manual run, use `python -m app.maintenance`; no additional cron service is required. Incident and audit retention is intentionally separate so investigation history is preserved; define a policy appropriate to your organization before extended operation.
 
 The code does not provision a paid database, raise an account's spending limit, or change unrelated Railway services. A connected account's usage cap can prevent a service from remaining online; inspect available capacity before deployment.
+
+
+## Workspace migration (1.3)
+
+Migration 005 is additive: existing operational records belong to Sentinel Research Lab; existing approved accounts retain their roles. Previously public registrations awaiting their first approval get separate empty private workspaces. Deliberately restricted team accounts remain restricted. Back up the sentinel schema first. During a release from 1.2, stop the old API deployment before running 005 and starting 1.3: the 1.2 code has unscoped queries and must not run against newly approved private-workspace accounts. Do not roll back to 1.2 against this migrated database. A forward fix or a coordinated database restore is required.
+
+Every API image now includes collector and lab source files so authenticated setup downloads are self-contained. The existing server COLLECTOR_TOKEN remains scoped to the original research lab; personal workspaces use separately hashed collector credentials. No additional cloud resources or database instances are provisioned per signup.

@@ -73,6 +73,7 @@ class DiscoveredTopology(BaseModel):
 
 
 class Batch(BaseModel):
+    source_type: Literal["sdn_controller", "isolated_lab"] = "sdn_controller"
     topology: DiscoveredTopology = Field(default_factory=DiscoveredTopology)
     batch_id: UUID
     captured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

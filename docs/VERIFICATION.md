@@ -1,3 +1,21 @@
+# Workspace onboarding verification — Sentinel 1.3
+
+Verified 1 November 2026. This section supersedes the shared-workspace registration behavior documented in the historical 1.2 record below.
+
+- **59 backend tests passed** against a dedicated real PostgreSQL test database; **13 frontend tests passed**, TypeScript and the production build passed, and Ruff passed.
+- Fresh email and verified Google registrations own separate empty workspaces. Existing approved research-lab membership stays intact. A never-approved public registration whose role was promoted without approval also migrates correctly; deliberately revoked team access remains restricted.
+- Tests cover workspace-scoped collector ingestion, duplicate collector names, foreign batch-ID conflicts, history, CSV exports, users, assignment, incidents, mitigation commands, AI reports, WebSocket snapshots and cache keys. Scoped foreign keys protect related database records. Cross-workspace lookups/mutations return no foreign records.
+- A fresh local account was registered through the actual API and then used through browser email sign-in. Its initial collectors, flows and incidents were empty. Its private setup bundle was downloaded, its included real Mininet lab was started, and measurements appeared only after actual counter windows arrived.
+- Browser checks exercised workspace rename and persistence, live traffic, a genuine empty search result, stored-history search, CSV download, discovered switch inspection, and a member list containing only the workspace owner. The CSV contained its own collector ID and no original-lab collector ID.
+- Stopping this workspace's collector produced an offline state, zero current rates and retained stored history. Revoking its key caused authentication rejection; a replacement self-contained bundle reconnected. Source labels distinguish an isolated Mininet lab from an existing SDN controller. The lab does not capture ordinary Mac traffic.
+- The new Network setup layout fit a 390 × 844 viewport with no horizontal page overflow. Desktop and mobile screenshots are retained with the local verification artifacts. The test browser session was signed out.
+- A private pre-migration Neon schema backup was restored to a separate local test database. Migration rehearsal preserved all **5,909** archived flow windows, migrated the one never-approved public account into a private workspace, and produced **zero inherited private flow windows**.
+- The ML artifact and its published evaluation remain unchanged. They are shared pretrained research resources, not live accuracy estimates for new networks. Enforcement remains disabled. OpenRouter free-provider availability is external and was not represented as an invented success.
+
+Production release verification is recorded after deployment. No test-only counter fixtures are inserted into the application databases.
+
+---
+
 # Sentinel 1.2 verification — 1 November 2026
 
 Verified path: actual isolated Mininet packets → three Open vSwitch switches → private OS-Ken counter and LLDP discovery API → persistent collector spool → Railway API → integrity-checked Extra Trees → Neon PostgreSQL → authenticated WebSocket → React on Vercel.

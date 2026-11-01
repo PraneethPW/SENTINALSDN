@@ -1,8 +1,7 @@
-export const API = (
-  import.meta.env.VITE_API_URL ?? ""
-).replace(/\/$/, "");
+export const API = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 export type User = {
   id: string;
+  workspace_id?: string;
   email: string;
   approved?: boolean;
   display_name?: string;
@@ -11,6 +10,7 @@ export type User = {
 };
 export type Flow = {
   id: number;
+  collector_id?: string;
   observed_at: string;
   switch_id: string;
   source_ip: string;
@@ -40,7 +40,7 @@ export type Incident = {
   model_version: string;
   status: "open" | "acknowledged" | "resolved";
   revision: number;
-  assignee_id: string|null;
+  assignee_id: string | null;
   notes: string;
 };
 export type Command = {
@@ -52,13 +52,38 @@ export type Command = {
   detail: string | null;
 };
 export type Collector = {
+  source_type?: "sdn_controller" | "isolated_lab";
   id: string;
   last_seen: string;
   switches: string[];
   controller_status: string;
   online: boolean;
   version: string;
-  topology?: { available: boolean; links: {source:string;target:string;source_port:number;target_port:number}[]; hosts: {mac:string;addresses:string[];switch_id:string;port:number}[]; ports: {switch_id:string;port:number;rx_bytes:number;tx_bytes:number;rx_dropped:number;tx_dropped:number;rx_errors:number;tx_errors:number}[] };
+  topology?: {
+    available: boolean;
+    links: {
+      source: string;
+      target: string;
+      source_port: number;
+      target_port: number;
+    }[];
+    hosts: {
+      mac: string;
+      addresses: string[];
+      switch_id: string;
+      port: number;
+    }[];
+    ports: {
+      switch_id: string;
+      port: number;
+      rx_bytes: number;
+      tx_bytes: number;
+      rx_dropped: number;
+      tx_dropped: number;
+      rx_errors: number;
+      tx_errors: number;
+    }[];
+  };
 };
 export type Model = {
   ready: boolean;
@@ -78,13 +103,33 @@ export type Model = {
       string,
       { precision: number; recall: number; "f1-score": number }
     >;
-    cross_validation?: {precision:number;recall:number;fpr:number}[];
+    cross_validation?: { precision: number; recall: number; fpr: number }[];
     limitations: string;
   };
 };
 export type Snapshot = {
+  workspace?: {
+    id: string;
+    name: string;
+    kind: "private" | "research_lab";
+    created_at: string;
+    has_measurements: boolean;
+    collector_key: null | {
+      id: string;
+      prefix: string;
+      created_at: string;
+      last_used_at: string | null;
+    };
+  };
   revision?: string;
-  reports?: {id:string;incident_id:string;status:string;content:string;model:string;created_at:string}[];
+  reports?: {
+    id: string;
+    incident_id: string;
+    status: string;
+    content: string;
+    model: string;
+    created_at: string;
+  }[];
   timestamp: string;
   window_minutes: number;
   summary: {
@@ -144,7 +189,14 @@ export async function request<T>(
       typeof data.detail === "string"
         ? data.detail
         : Array.isArray(data.detail)
-          ? data.detail.slice(0,3).map((item:{msg?:string})=>typeof item.msg==='string'?item.msg.replace(/^Value error, /,''):'Invalid input').join('. ')
+          ? data.detail
+              .slice(0, 3)
+              .map((item: { msg?: string }) =>
+                typeof item.msg === "string"
+                  ? item.msg.replace(/^Value error, /, "")
+                  : "Invalid input",
+              )
+              .join(". ")
           : `Request failed (${response.status})`,
     );
   return data as T;

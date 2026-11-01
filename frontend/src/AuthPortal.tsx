@@ -167,7 +167,7 @@ export default function AuthPortal({
           </h1>
           <p className="auth-intro">
             {register
-              ? "Create your account, then request access to the network workspace."
+              ? "Create your private workspace, then connect your network. No approval wait."
               : "Sign in to your Sentinel account and continue where you left off."}
           </p>
           <button
@@ -315,7 +315,7 @@ export default function AuthPortal({
           <p className="auth-privacy">
             <LockKeyhole size={12} />
             {register
-              ? "Registration does not grant access to network data."
+              ? "Your workspace starts empty. Connect your own network to see measurements."
               : "Your session is private to this browser tab."}{" "}
             <a href="/privacy">Privacy details</a>
           </p>
@@ -345,7 +345,7 @@ export default function AuthPortal({
         </p>
         <div className="auth-art-assurance">
           <Check size={14} />
-          Workspace approval protects operational telemetry.
+          Your network evidence stays in your workspace.
         </div>
         <span className="auth-art-label">SIGNAL INTEGRITY / HUMAN INTENT</span>
       </aside>

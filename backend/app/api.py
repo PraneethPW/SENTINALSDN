@@ -74,7 +74,7 @@ async def ws_ticket(user=Depends(current_user)):
     return {"ticket": ticket}
 
 
-async def snapshot(minutes: int = 15):
+async def snapshot(minutes: int = 15, *, workspace_id):
     async with db.connection() as conn:
         # One consistent database snapshot for counters, tables, and charts.
         await conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
@@ -90,43 +90,67 @@ async def snapshot(minutes: int = 15):
             count(*) FILTER(WHERE prediction='unclassified') AS unclassified_windows,
             COALESCE(sum(bytes) FILTER(WHERE observed_at>now()-interval '60 seconds'),0)*(8.0/60) AS bits_per_second,
             COALESCE(sum(packets) FILTER(WHERE observed_at>now()-interval '60 seconds'),0)/60.0 AS packets_per_second,
-            max(observed_at) AS last_flow FROM flows WHERE observed_at>now()-make_interval(mins=>%s)""",
-                (minutes,),
+            max(observed_at) AS last_flow FROM flows WHERE workspace_id=%s AND observed_at>now()-make_interval(mins=>%s)""",
+                (workspace_id, minutes),
             )
         )[0]
         summary["open_incidents"] = (
-            await fetch("SELECT count(*) AS n FROM incidents WHERE status != 'resolved'")
+            await fetch(
+                "SELECT count(*) AS n FROM incidents WHERE workspace_id=%s AND status != 'resolved'",
+                (workspace_id,),
+            )
         )[0]["n"]
         collectors = await fetch(
-            "SELECT *,last_seen>now()-interval '75 seconds' AS online FROM collectors ORDER BY id"
+            "SELECT *,last_seen>now()-interval '75 seconds' AS online FROM collectors WHERE workspace_id=%s ORDER BY id",
+            (workspace_id,),
         )
         series = await fetch(
             """SELECT date_bin(interval '30 seconds',observed_at,'2020-01-01'::timestamptz) AS time,
             sum(bytes)*(8.0/30) AS bps,sum(packets)/30.0 AS pps,
             sum(CASE WHEN prediction='attack' THEN bytes ELSE 0 END)*(8.0/30) AS attack_bps
-            FROM flows WHERE observed_at>now()-make_interval(mins=>%s) GROUP BY 1 ORDER BY 1""",
-            (minutes,),
+            FROM flows WHERE workspace_id=%s AND observed_at>now()-make_interval(mins=>%s) GROUP BY 1 ORDER BY 1""",
+            (workspace_id, minutes),
         )
         flows = await fetch(
-            "SELECT * FROM flows WHERE observed_at>now()-make_interval(mins=>%s) ORDER BY observed_at DESC,id DESC LIMIT 100",
-            (minutes,),
+            "SELECT * FROM flows WHERE workspace_id=%s AND observed_at>now()-make_interval(mins=>%s) ORDER BY observed_at DESC,id DESC LIMIT 100",
+            (workspace_id, minutes),
         )
-        incidents = await fetch("SELECT * FROM incidents ORDER BY last_seen DESC LIMIT 100")
-        commands = await fetch("""SELECT id,incident_id,kind,cookie,created_at,expires_at,detail,
+        incidents = await fetch(
+            "SELECT * FROM incidents WHERE workspace_id=%s ORDER BY last_seen DESC LIMIT 100", (workspace_id,)
+        )
+        commands = await fetch(
+            """SELECT id,incident_id,kind,cookie,created_at,expires_at,detail,
             CASE WHEN status='enforced' AND expires_at<=now() THEN 'expired' ELSE status END AS status
-            FROM commands ORDER BY created_at DESC LIMIT 100""")
+            FROM commands WHERE workspace_id=%s ORDER BY created_at DESC LIMIT 100""",
+            (workspace_id,),
+        )
         protocols = await fetch(
             """SELECT protocol,sum(bytes) AS bytes,sum(packets) AS packets
-            FROM flows WHERE observed_at>now()-make_interval(mins=>%s) GROUP BY protocol ORDER BY bytes DESC""",
-            (minutes,),
+            FROM flows WHERE workspace_id=%s AND observed_at>now()-make_interval(mins=>%s) GROUP BY protocol ORDER BY bytes DESC""",
+            (workspace_id, minutes),
         )
-        audit = await fetch("SELECT * FROM audit_log ORDER BY id DESC LIMIT 30")
+        audit = await fetch(
+            "SELECT * FROM audit_log WHERE workspace_id=%s ORDER BY id DESC LIMIT 30", (workspace_id,)
+        )
         reports = await fetch(
-            "SELECT id,incident_id,status,content,model,created_at FROM ai_reports ORDER BY created_at DESC LIMIT 30"
+            "SELECT id,incident_id,status,content,model,created_at FROM ai_reports WHERE workspace_id=%s ORDER BY created_at DESC LIMIT 30",
+            (workspace_id,),
+        )
+        workspace = (
+            await fetch("SELECT id,name,kind,created_at FROM workspaces WHERE id=%s", (workspace_id,))
+        )[0]
+        key = await fetch(
+            "SELECT id,prefix,created_at,last_used_at FROM collector_credentials WHERE workspace_id=%s AND revoked_at IS NULL",
+            (workspace_id,),
+        )
+        workspace["collector_key"] = key[0] if key else None
+        workspace["has_measurements"] = bool(
+            (await fetch("SELECT 1 FROM flows WHERE workspace_id=%s LIMIT 1", (workspace_id,)))
         )
     return {
         "timestamp": datetime.now(timezone.utc),
         "window_minutes": minutes,
+        "workspace": workspace,
         "summary": summary,
         "collectors": collectors,
         "series": series,
@@ -147,7 +171,7 @@ async def snapshot(minutes: int = 15):
 
 @router.get("/snapshot")
 async def get_snapshot(minutes: int = Query(default=15, ge=1, le=60), user=Depends(current_user)):
-    return await snapshot(minutes)
+    return await snapshot(minutes, workspace_id=user["workspace_id"])
 
 
 @router.patch("/incidents/{incident_id}")
@@ -156,27 +180,33 @@ async def update_incident(incident_id: UUID, body: IncidentUpdate, user=Depends(
         if body.assignee_id:
             target = await (
                 await conn.execute(
-                    "SELECT 1 FROM users WHERE id=%s AND active AND approved AND role IN ('admin','operator')",
-                    (body.assignee_id,),
+                    "SELECT 1 FROM users WHERE id=%s AND workspace_id=%s AND active AND approved AND role IN ('admin','operator')",
+                    (body.assignee_id, user["workspace_id"]),
                 )
             ).fetchone()
             if not target:
                 raise HTTPException(422, "Assign an active administrator or operator")
         cursor = await conn.execute(
-            "UPDATE incidents SET status=%s,notes=%s,revision=revision+1,assignee_id=CASE WHEN %s THEN %s::uuid ELSE assignee_id END WHERE id=%s AND (%s::integer IS NULL OR revision=%s) RETURNING *",
+            "UPDATE incidents SET status=%s,notes=%s,revision=revision+1,assignee_id=CASE WHEN %s THEN %s::uuid ELSE assignee_id END WHERE id=%s AND workspace_id=%s AND (%s::integer IS NULL OR revision=%s) RETURNING *",
             (
                 body.status,
                 body.notes,
                 "assignee_id" in body.model_fields_set,
                 body.assignee_id,
                 incident_id,
+                user["workspace_id"],
                 body.revision,
                 body.revision,
             ),
         )
         incident = await cursor.fetchone()
         if not incident:
-            if await (await conn.execute("SELECT 1 FROM incidents WHERE id=%s", (incident_id,))).fetchone():
+            if await (
+                await conn.execute(
+                    "SELECT 1 FROM incidents WHERE id=%s AND workspace_id=%s",
+                    (incident_id, user["workspace_id"]),
+                )
+            ).fetchone():
                 raise HTTPException(
                     409, "Another operator updated this incident. Reopen it to review the latest notes."
                 )
@@ -202,25 +232,29 @@ async def mitigate(incident_id: UUID, user=Depends(operator)):
             409, "Mitigation is disabled. Enable it on the backend and collector after model validation."
         )
     async with db.connection() as conn:
-        cursor = await conn.execute("SELECT * FROM incidents WHERE id=%s FOR UPDATE", (incident_id,))
+        cursor = await conn.execute(
+            "SELECT * FROM incidents WHERE id=%s AND workspace_id=%s FOR UPDATE",
+            (incident_id, user["workspace_id"]),
+        )
         incident = await cursor.fetchone()
         if not incident:
             raise HTTPException(404, "Incident not found")
         if incident["status"] == "resolved":
             raise HTTPException(409, "Resolved incidents cannot be mitigated")
         cursor = await conn.execute(
-            "SELECT online FROM (SELECT last_seen>now()-interval '75 seconds' AND controller_status='connected' AS online FROM collectors WHERE id=%s) c",
-            (incident["collector_id"],),
+            "SELECT online FROM (SELECT last_seen>now()-interval '75 seconds' AND controller_status='connected' AS online FROM collectors WHERE id=%s AND workspace_id=%s) c",
+            (incident["collector_id"], user["workspace_id"]),
         )
         collector = await cursor.fetchone()
         if not collector or not collector["online"]:
             raise HTTPException(409, "Collector/controller is offline; no rule was requested")
         await conn.execute(
-            "UPDATE commands SET status='expired' WHERE status='enforced' AND expires_at<=now()"
+            "UPDATE commands SET status='expired' WHERE workspace_id=%s AND status='enforced' AND expires_at<=now()",
+            (user["workspace_id"],),
         )
         cursor = await conn.execute(
-            "SELECT id FROM commands WHERE incident_id=%s AND kind='block' AND status IN ('queued','dispatched','enforced')",
-            (incident_id,),
+            "SELECT id FROM commands WHERE incident_id=%s AND workspace_id=%s AND kind='block' AND status IN ('queued','dispatched','enforced')",
+            (incident_id, user["workspace_id"]),
         )
         if await cursor.fetchone():
             raise HTTPException(409, "A block is already queued or enforced for this incident")
@@ -234,9 +268,17 @@ async def mitigate(incident_id: UUID, user=Depends(operator)):
             "hard_timeout": 300,
         }
         await conn.execute(
-            """INSERT INTO commands(id,incident_id,collector_id,kind,status,cookie,payload,requested_by)
-            VALUES (%s,%s,%s,'block','queued',%s,%s,%s)""",
-            (command_id, incident_id, incident["collector_id"], cookie, Jsonb(payload), user["id"]),
+            """INSERT INTO commands(id,incident_id,collector_id,kind,status,cookie,payload,requested_by,workspace_id)
+            VALUES (%s,%s,%s,'block','queued',%s,%s,%s,%s)""",
+            (
+                command_id,
+                incident_id,
+                incident["collector_id"],
+                cookie,
+                Jsonb(payload),
+                user["id"],
+                user["workspace_id"],
+            ),
         )
         await db.audit(conn, user["id"], "mitigation.requested", command_id, payload)
     return {"id": command_id, "status": "queued", "detail": "Awaiting switch verification from collector"}
@@ -245,22 +287,25 @@ async def mitigate(incident_id: UUID, user=Depends(operator)):
 @router.post("/commands/{command_id}/revoke")
 async def revoke(command_id: UUID, user=Depends(operator)):
     async with db.connection() as conn:
-        cursor = await conn.execute("SELECT * FROM commands WHERE id=%s FOR UPDATE", (command_id,))
+        cursor = await conn.execute(
+            "SELECT * FROM commands WHERE id=%s AND workspace_id=%s FOR UPDATE",
+            (command_id, user["workspace_id"]),
+        )
         command = await cursor.fetchone()
         if not command or command["kind"] != "block":
             raise HTTPException(404, "Block command not found")
         if command["status"] != "enforced" or command["expires_at"] <= datetime.now(timezone.utc):
             raise HTTPException(409, "Only active enforced rules can be revoked")
         cursor = await conn.execute(
-            "SELECT id FROM commands WHERE cookie=%s AND kind='unblock' AND status IN ('queued','dispatched')",
-            (command["cookie"],),
+            "SELECT id FROM commands WHERE cookie=%s AND workspace_id=%s AND kind='unblock' AND status IN ('queued','dispatched')",
+            (command["cookie"], user["workspace_id"]),
         )
         if await cursor.fetchone():
             raise HTTPException(409, "Revocation already requested")
         revoke_id = uuid4()
         await conn.execute(
-            """INSERT INTO commands(id,incident_id,collector_id,kind,status,cookie,payload,requested_by)
-            VALUES (%s,%s,%s,'unblock','queued',%s,%s,%s)""",
+            """INSERT INTO commands(id,incident_id,collector_id,kind,status,cookie,payload,requested_by,workspace_id)
+            VALUES (%s,%s,%s,'unblock','queued',%s,%s,%s,%s)""",
             (
                 revoke_id,
                 command["incident_id"],
@@ -268,6 +313,7 @@ async def revoke(command_id: UUID, user=Depends(operator)):
                 command["cookie"],
                 Jsonb(command["payload"]),
                 user["id"],
+                user["workspace_id"],
             ),
         )
         await db.audit(conn, user["id"], "mitigation.revoke_requested", revoke_id)
@@ -277,14 +323,15 @@ async def revoke(command_id: UUID, user=Depends(operator)):
 @router.get("/flows/export")
 async def export_flows(minutes: int = Query(default=15, ge=1, le=60), user=Depends(current_user)):
     rows = await db.fetch(
-        """SELECT observed_at,switch_id,source_ip,destination_ip,protocol,packets,bytes,
+        """SELECT observed_at,collector_id,switch_id,source_ip,destination_ip,protocol,packets,bytes,
         packet_rate,byte_rate,prediction,attack_probability,model_version FROM flows
-        WHERE observed_at>now()-make_interval(mins=>%s) ORDER BY observed_at DESC LIMIT 10000""",
-        (minutes,),
+        WHERE workspace_id=%s AND observed_at>now()-make_interval(mins=>%s) ORDER BY observed_at DESC LIMIT 10000""",
+        (user["workspace_id"], minutes),
     )
     output = io.StringIO()
     fields = [
         "observed_at",
+        "collector_id",
         "switch_id",
         "source_ip",
         "destination_ip",
@@ -311,7 +358,9 @@ async def export_flows(minutes: int = Query(default=15, ge=1, le=60), user=Depen
 async def explain(body: ExplainRequest, user=Depends(operator)):
     if not settings().openrouter_api_key:
         raise HTTPException(503, "Add OPENROUTER_API_KEY on the backend to enable incident analysis")
-    incident = await db.one("SELECT * FROM incidents WHERE id=%s", (body.incident_id,))
+    incident = await db.one(
+        "SELECT * FROM incidents WHERE id=%s AND workspace_id=%s", (body.incident_id, user["workspace_id"])
+    )
     if not incident:
         raise HTTPException(404, "Incident not found")
     report_id = uuid4()
@@ -324,8 +373,8 @@ async def explain(body: ExplainRequest, user=Depends(operator)):
         if (await cursor.fetchone())["n"] >= 2:
             raise HTTPException(429, "Analysis is limited to two requests per minute")
         await conn.execute(
-            "INSERT INTO ai_reports(id,incident_id,requested_by,status,model) VALUES (%s,%s,%s,'pending',%s)",
-            (report_id, body.incident_id, user["id"], settings().openrouter_model),
+            "INSERT INTO ai_reports(id,incident_id,requested_by,status,model,workspace_id) VALUES (%s,%s,%s,'pending',%s,%s)",
+            (report_id, body.incident_id, user["id"], settings().openrouter_model, user["workspace_id"]),
         )
     # Avoid transmitting IP addresses and user notes to an external model.
     evidence = {
@@ -374,5 +423,6 @@ async def explain(body: ExplainRequest, user=Depends(operator)):
 @router.get("/intelligence/reports")
 async def reports(user=Depends(current_user)):
     return await db.fetch(
-        "SELECT id,incident_id,status,content,model,created_at FROM ai_reports ORDER BY created_at DESC LIMIT 30"
+        "SELECT id,incident_id,status,content,model,created_at FROM ai_reports WHERE workspace_id=%s ORDER BY created_at DESC LIMIT 30",
+        (user["workspace_id"],),
     )

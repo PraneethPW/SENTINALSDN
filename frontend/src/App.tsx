@@ -38,7 +38,6 @@ import {
   Shield,
   ShieldCheck,
   Sparkles,
-  Terminal,
   TriangleAlert,
   Waves,
   X,
@@ -49,6 +48,7 @@ import type { Incident, User } from "./api";
 import { useNetwork } from "./useNetwork";
 import { WorkspaceControls, FlowHistory } from "./components/WorkspaceControls";
 import { Topology, TrafficChart } from "./components/Charts";
+import NetworkSetup from "./components/NetworkSetup";
 
 const NetworkScene = lazy(() => import("./components/NetworkScene"));
 const sections = [
@@ -58,11 +58,12 @@ const sections = [
   { id: "incidents", label: "Incidents", icon: Shield },
   { id: "intelligence", label: "Intelligence", icon: Sparkles },
   { id: "system", label: "System settings", icon: Settings2 },
+  { id: "setup", label: "Network setup", icon: Radio },
 ] as const;
 type Section = (typeof sections)[number]["id"];
 const titles: Record<Section, [string, string]> = {
   overview: ["Network overview", "A clearer view. A stronger perimeter."],
-  traffic: ["Live traffic", "Every observed flow. Nothing invented."],
+  traffic: ["Live traffic", "Measured flow windows from your workspace."],
   topology: [
     "Network topology",
     "Discover the infrastructure behind the signal.",
@@ -76,6 +77,7 @@ const titles: Record<Section, [string, string]> = {
     "Measured by machine learning. Interpreted with context.",
   ],
   system: ["System settings", "Every connection, accounted for."],
+  setup: ["Network setup", "Connect your network. Follow every measurement."],
 };
 
 function Modal({
@@ -222,9 +224,13 @@ export default function App() {
   const network = useNetwork(minutes);
   const { data, user, token, connection, error } = network;
   const systemReduced = useReducedMotion();
-  const [motionOff, setMotionOff] = useState(
-    () => {try{return localStorage.getItem("sentinel.motion-off") === "true"}catch{return false}},
-  );
+  const [motionOff, setMotionOff] = useState(() => {
+    try {
+      return localStorage.getItem("sentinel.motion-off") === "true";
+    } catch {
+      return false;
+    }
+  });
   const reduced = !!systemReduced || motionOff;
   const [loginOpen, setLoginOpen] = useState(false),
     [guideOpen, setGuideOpen] = useState(false),
@@ -237,10 +243,28 @@ export default function App() {
     [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"),
     [selected, setSelected] = useState<Incident | null>(null);
-  const [assignee,setAssignee]=useState("");
-  const [assignable,setAssignable]=useState<(User&{active:boolean})[]>([]);
-  const seenIncidents=useRef<Set<string>|null>(null);
-  useEffect(()=>{if(!data){seenIncidents.current=null;return;}const ids=new Set(data.incidents.map(i=>i.id));if(seenIncidents.current){const count=data.incidents.filter(i=>!seenIncidents.current!.has(i.id)&&i.status==="open").length;if(count)setToast(`${count} new model detection${count>1?"s":""} need review.`);}seenIncidents.current=ids;},[data]);
+  const [assignee, setAssignee] = useState("");
+  const [assignable, setAssignable] = useState<(User & { active: boolean })[]>(
+    [],
+  );
+  const seenIncidents = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!data) {
+      seenIncidents.current = null;
+      return;
+    }
+    const ids = new Set(data.incidents.map((i) => i.id));
+    if (seenIncidents.current) {
+      const count = data.incidents.filter(
+        (i) => !seenIncidents.current!.has(i.id) && i.status === "open",
+      ).length;
+      if (count)
+        setToast(
+          `${count} new model detection${count > 1 ? "s" : ""} need review.`,
+        );
+    }
+    seenIncidents.current = ids;
+  }, [data]);
   const [notes, setNotes] = useState(""),
     [report, setReport] = useState(""),
     [analysisId, setAnalysisId] = useState("");
@@ -253,7 +277,7 @@ export default function App() {
       incident_id: string;
     }[]
   >([]);
-  const {scrollYProgress: pageProgress} = useScroll();
+  const { scrollYProgress: pageProgress } = useScroll();
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -261,7 +285,9 @@ export default function App() {
   });
   const sceneY = useTransform(scrollYProgress, [0, 1], [0, reduced ? 0 : 60]);
   const openIncidents =
-    data?.summary.open_incidents ?? data?.incidents.filter((i) => i.status !== "resolved").length ?? 0;
+    data?.summary.open_incidents ??
+    data?.incidents.filter((i) => i.status !== "resolved").length ??
+    0;
   const onlineCollectors =
     data?.collectors.filter(
       (c) => c.online && c.controller_status === "connected",
@@ -304,7 +330,10 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
-    if (data?.reports) { setReports(data.reports); return; }
+    if (data?.reports) {
+      setReports(data.reports);
+      return;
+    }
     if (section === "intelligence" && token)
       void request<typeof reports>("/api/intelligence/reports", token)
         .then(setReports)
@@ -333,7 +362,13 @@ export default function App() {
     setBusy(key);
     try {
       const changed = await work();
-      if (changed && typeof changed === "object" && "notes" in changed && "revision" in changed) setSelected(changed as Incident);
+      if (
+        changed &&
+        typeof changed === "object" &&
+        "notes" in changed &&
+        "revision" in changed
+      )
+        setSelected(changed as Incident);
       await network.refresh();
       setToast(success);
     } catch (e) {
@@ -391,7 +426,10 @@ export default function App() {
     setSelected(incident);
     setNotes(incident.notes);
     setAssignee(incident.assignee_id ?? "");
-    if(token)void request<(User&{active:boolean})[]>("/api/users",token).then(setAssignable).catch(()=>setAssignable([]));
+    if (token)
+      void request<(User & { active: boolean })[]>("/api/users", token)
+        .then(setAssignable)
+        .catch(() => setAssignable([]));
     setReport("");
     setAnalysisId("");
   }
@@ -432,6 +470,7 @@ export default function App() {
                   {flow.destination_ip}
                 </span>
                 <small>
+                  {flow.collector_id ? `${flow.collector_id} · ` : ""}
                   SW-{flow.switch_id}
                   {flow.destination_port !== null
                     ? ` · port ${flow.destination_port}`
@@ -456,7 +495,9 @@ export default function App() {
                         : "neutral"
                   }
                 >
-                  {flow.prediction === "attack" ? "Model flagged" : flow.prediction}
+                  {flow.prediction === "attack"
+                    ? "Model flagged"
+                    : flow.prediction}
                 </Badge>
               </td>
               <td className="mono muted">{time(flow.observed_at)}</td>
@@ -493,7 +534,11 @@ export default function App() {
 
   return (
     <div className={`app-shell ${reduced ? "motion-off" : ""}`}>
-      <motion.div className="scroll-progress" aria-hidden="true" style={{scaleX:reduced?0:pageProgress}}/>
+      <motion.div
+        className="scroll-progress"
+        aria-hidden="true"
+        style={{ scaleX: reduced ? 0 : pageProgress }}
+      />
       <a href="#main" className="skip-link">
         Skip to content
       </a>
@@ -517,7 +562,8 @@ export default function App() {
             <Network size={16} />
           </span>
           <div>
-            Network workspace<small>{user ? user.role : "Not connected"}</small>
+            {data?.workspace?.name ?? "Network workspace"}
+            <small>{user ? user.role : "Not connected"}</small>
           </div>
           <ChevronDown size={13} />
         </div>
@@ -580,7 +626,10 @@ export default function App() {
             <ArrowUpRight size={14} />
           </button>
           <div className="sidebar-footer">
-            <a href="/" className="workspace-home-link">← Sentinel home</a><span className="version">SENTINEL / 1.2</span>
+            <a href="/" className="workspace-home-link">
+              ← Sentinel home
+            </a>
+            <span className="version">SENTINEL / 1.3</span>
             <span className="footer-dot" />{" "}
             <span>OBSERVE. UNDERSTAND. DEFEND.</span>
           </div>
@@ -613,7 +662,7 @@ export default function App() {
             >
               <i />
               {connection === "live"
-                ? "Stream connected"
+                ? "Console connected"
                 : connection === "connecting"
                   ? "Connecting"
                   : connection === "reconnecting"
@@ -624,7 +673,14 @@ export default function App() {
             <button
               className="icon-button motion-toggle"
               onClick={() => {
-                try {localStorage.setItem("sentinel.motion-off", String(!motionOff));} catch {/* Keep the preference in memory when storage is unavailable. */}
+                try {
+                  localStorage.setItem(
+                    "sentinel.motion-off",
+                    String(!motionOff),
+                  );
+                } catch {
+                  /* Keep the preference in memory when storage is unavailable. */
+                }
                 setMotionOff(!motionOff);
               }}
               aria-label={
@@ -699,13 +755,83 @@ export default function App() {
             <div className="connection-warning" role="status">
               <TriangleAlert size={16} />
               <span>
-                {error || "Live connection interrupted."} {data ? `Showing the last received snapshot from ${time(data.timestamp)}. Status and counters may be stale.` : ""}
+                {error || "Live connection interrupted."}{" "}
+                {data
+                  ? `Showing the last received snapshot from ${time(data.timestamp)}. Status and counters may be stale.`
+                  : ""}
               </span>
             </div>
           ) : null}
-          {token && connection === "connecting" ? <div className="loader-track" role="status" aria-label="Connecting to your network"/> : null}
-          {token && data && !onlineCollectors.length ? <div className="connection-warning" role="status"><Radio size={16}/><span>No collector is reporting current measurements. The console connection remains active; last known infrastructure is marked offline.</span></div> : null}
-          {section === "intelligence" && reports.some(r=>r.status!=="complete") ? <div className="operation-message" role="status">{reports.filter(r=>r.status==='pending').length} analyses in progress · {reports.filter(r=>r.status==='failed').length} provider requests failed. Detection operates independently.</div> : null}
+          {token && connection === "connecting" ? (
+            <div
+              className="loader-track"
+              role="status"
+              aria-label="Connecting to your network"
+            />
+          ) : null}
+          {token &&
+          data &&
+          data.collectors.length > 0 &&
+          !onlineCollectors.length ? (
+            <div className="connection-warning" role="status">
+              <Radio size={16} />
+              <span>
+                No collector is reporting current measurements. The console
+                connection remains active; last known infrastructure is marked
+                offline.
+              </span>
+            </div>
+          ) : null}
+          {data?.workspace ? (
+            <div
+              className="workspace-source"
+              aria-label="Workspace data source"
+            >
+              <div>
+                <ShieldCheck size={16} />
+                <strong>{data.workspace.name}</strong>
+                <span>
+                  {data.workspace.kind === "research_lab"
+                    ? "Existing research lab"
+                    : "Private network workspace"}
+                </span>
+              </div>
+              <p>
+                {data.collectors.length
+                  ? `${onlineCollectors.length} reporting / ${data.collectors.length} registered collector${data.collectors.length === 1 ? "" : "s"} · ${data.summary.last_flow ? `last measured flow ${time(data.summary.last_flow)}` : "no measured flow in this time range"}`
+                  : "No network connected · this workspace has no inherited telemetry"}
+              </p>
+              <button className="text-button" onClick={() => navigate("setup")}>
+                Manage connection <ArrowRight size={14} />
+              </button>
+              {data.collectors.length ? (
+                <div className="source-collectors">
+                  {data.collectors.slice(0, 6).map((c) => (
+                    <span key={c.id}>
+                      {c.id} ·{" "}
+                      {c.source_type === "isolated_lab"
+                        ? "Isolated Mininet lab"
+                        : "SDN controller"}{" "}
+                      ·{" "}
+                      {c.online
+                        ? c.controller_status === "connected"
+                          ? "reporting"
+                          : "controller unreachable"
+                        : "offline"}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {section === "intelligence" &&
+          reports.some((r) => r.status !== "complete") ? (
+            <div className="operation-message" role="status">
+              {reports.filter((r) => r.status === "pending").length} analyses in
+              progress · {reports.filter((r) => r.status === "failed").length}{" "}
+              provider requests failed. Detection operates independently.
+            </div>
+          ) : null}
           <AnimatePresence mode="wait">
             <motion.div
               key={section}
@@ -714,9 +840,29 @@ export default function App() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
+              {section === "setup" && token && user && data ? (
+                <NetworkSetup
+                  token={token}
+                  user={user}
+                  data={data}
+                  refresh={network.refresh}
+                />
+              ) : null}
               {section === "overview" ? (
                 <>
-                  <section className="hero-panel" ref={heroRef}>
+                  {token && user && data && !data.collectors.length ? (
+                    <NetworkSetup
+                      token={token}
+                      user={user}
+                      data={data}
+                      refresh={network.refresh}
+                    />
+                  ) : null}
+                  <section
+                    className="hero-panel"
+                    ref={heroRef}
+                    hidden={!!data && !data.collectors.length}
+                  >
                     <div className="hero-grid" />
                     <div className="hero-topline">
                       <span>
@@ -807,7 +953,9 @@ export default function App() {
                     </span>
                     <span className="muted tiny">
                       {data
-                        ? `Updated ${time(data.timestamp)}`
+                        ? data.summary.last_flow
+                          ? `Last flow ${time(data.summary.last_flow)}`
+                          : "Awaiting measured traffic"
                         : "Waiting for a secure connection"}
                       <i className="inline-dot" />
                       60-second rate window
@@ -817,30 +965,36 @@ export default function App() {
                     {[
                       {
                         label: "Observed throughput",
-                        value: data
-                          ? compact(Number(data.summary.bits_per_second), "bps")
-                          : "—",
+                        value:
+                          data && (data.workspace?.has_measurements ?? true)
+                            ? compact(
+                                Number(data.summary.bits_per_second),
+                                "bps",
+                              )
+                            : "—",
                         caption: "Across monitored flow entries",
                         icon: Activity,
                         tag: "TRAFFIC",
                       },
                       {
                         label: "Packet rate",
-                        value: data
-                          ? compact(
-                              Number(data.summary.packets_per_second),
-                              "pps",
-                            )
-                          : "—",
+                        value:
+                          data && (data.workspace?.has_measurements ?? true)
+                            ? compact(
+                                Number(data.summary.packets_per_second),
+                                "pps",
+                              )
+                            : "—",
                         caption: "Measured over the last 60 seconds",
                         icon: Zap,
                         tag: "TELEMETRY",
                       },
                       {
                         label: "Open incidents",
-                        value: data
-                          ? String(openIncidents).padStart(2, "0")
-                          : "—",
+                        value:
+                          data && (data.workspace?.has_measurements ?? true)
+                            ? String(openIncidents).padStart(2, "0")
+                            : "—",
                         caption: data?.model.ready
                           ? "Unresolved model detections"
                           : "Classification awaits a trained model",
@@ -849,9 +1003,10 @@ export default function App() {
                       },
                       {
                         label: "Connected switches",
-                        value: data
-                          ? String(switchCount).padStart(2, "0")
-                          : "—",
+                        value:
+                          data && data.collectors.length > 0
+                            ? String(switchCount).padStart(2, "0")
+                            : "—",
                         caption: data
                           ? `${onlineCollectors.length} reporting collector${onlineCollectors.length === 1 ? "" : "s"}`
                           : "Discover through your controller",
@@ -982,7 +1137,9 @@ export default function App() {
                       </p>
                       <div className="model-status-row">
                         <span>Classifier</span>
-                        <strong>{data?.model.metadata?.algorithm ?? "Not installed"}</strong>
+                        <strong>
+                          {data?.model.metadata?.algorithm ?? "Not installed"}
+                        </strong>
                       </div>
                       <div className="model-status-row">
                         <span>Model status</span>
@@ -1058,7 +1215,9 @@ export default function App() {
                   </p>
                 </>
               ) : null}
-              {section === "traffic" && token ? <FlowHistory token={token}/> : null}
+              {section === "traffic" && token ? (
+                <FlowHistory token={token} />
+              ) : null}
               {section === "topology" ? (
                 <section className="panel">
                   <PanelHeading
@@ -1281,10 +1440,15 @@ export default function App() {
                       <div className="model-orbit">
                         <Cpu size={36} strokeWidth={1} />
                       </div>
-                      <h3>{data?.model.metadata?.algorithm ?? "Detection"} classifier</h3>
+                      <h3>
+                        {data?.model.metadata?.algorithm ?? "Detection"}{" "}
+                        classifier
+                      </h3>
                       <p>
                         Five measured flow features. Group-held-out evaluation.
-                        A versioned artifact with a verified SHA-256.
+                        A versioned artifact with a verified SHA-256. Shared
+                        pretrained research model; these metrics describe its
+                        public evaluation, not the accuracy of your network.
                       </p>
                       {data?.model.metadata ? (
                         <>
@@ -1339,7 +1503,25 @@ export default function App() {
                           <p className="footnote">
                             {data.model.metadata.limitations}
                           </p>
-                          {data.model.metadata.cross_validation?.length ? <p className="footnote">Across training-group validation folds, attack recall ranged {Math.min(...data.model.metadata.cross_validation.map(f=>f.recall*100)).toFixed(1)}–{Math.max(...data.model.metadata.cross_validation.map(f=>f.recall*100)).toFixed(1)}%. Performance varies by traffic family; validate your network before enforcement.</p> : null}
+                          {data.model.metadata.cross_validation?.length ? (
+                            <p className="footnote">
+                              Across training-group validation folds, attack
+                              recall ranged{" "}
+                              {Math.min(
+                                ...data.model.metadata.cross_validation.map(
+                                  (f) => f.recall * 100,
+                                ),
+                              ).toFixed(1)}
+                              –
+                              {Math.max(
+                                ...data.model.metadata.cross_validation.map(
+                                  (f) => f.recall * 100,
+                                ),
+                              ).toFixed(1)}
+                              %. Performance varies by traffic family; validate
+                              your network before enforcement.
+                            </p>
+                          ) : null}
                           <p className="mono tiny">
                             {data.model.metadata.version}
                           </p>
@@ -1469,7 +1651,14 @@ export default function App() {
                   </section>
                 </div>
               ) : null}
-              {section === "system" && token && user ? <WorkspaceControls token={token} user={user} revision={data?.revision ?? ""} onLogout={network.logout}/> : null}
+              {section === "system" && token && user ? (
+                <WorkspaceControls
+                  token={token}
+                  user={user}
+                  revision={data?.revision ?? ""}
+                  onLogout={network.logout}
+                />
+              ) : null}
               {section === "system" ? (
                 <>
                   <div className="settings-grid">
@@ -1560,7 +1749,14 @@ export default function App() {
                           className="button secondary"
                           onClick={() => {
                             setMotionOff(!motionOff);
-                            try {localStorage.setItem("sentinel.motion-off", String(!motionOff));} catch {/* In-memory preference remains available. */}
+                            try {
+                              localStorage.setItem(
+                                "sentinel.motion-off",
+                                String(!motionOff),
+                              );
+                            } catch {
+                              /* In-memory preference remains available. */
+                            }
                           }}
                         >
                           {reduced ? (
@@ -1690,7 +1886,9 @@ export default function App() {
               </button>
             </form>
             <p className="footnote login-note">
-              Need an account? Ask your workspace administrator for access. Your sign-in is private to this workspace.
+              Need an account? Ask your workspace administrator for access.
+              Create a private workspace at /auth/register, or ask your
+              workspace administrator for a team account.
             </p>
           </Modal>
         ) : null}
@@ -1702,71 +1900,18 @@ export default function App() {
             title="Bring your network online"
             onClose={() => setGuideOpen(false)}
           >
-            <p className="guide-intro">
-              One measured pipeline, from your switch to this workspace.
-            </p>
-            <div className="guide-step">
-              <span>01</span>
-              <div>
-                <h3>Connect the data layer</h3>
-                <p>
-                  Set a TLS-enabled Neon <code>DATABASE_URL</code> in the
-                  backend environment. Run migrations, then create your operator
-                  account.
-                </p>
-                <pre>
-                  python -m app.db{"\n"}python -m app.admin your@email.com
-                </pre>
-              </div>
-              <Database size={20} />
-            </div>
-            <div className="guide-step">
-              <span>02</span>
-              <div>
-                <h3>Connect your SDN controller</h3>
-                <p>
-                  Run the collector beside a compatible OS-Ken/Ryu controller.
-                  Set <code>SENTINEL_API_URL</code>,{" "}
-                  <code>COLLECTOR_TOKEN</code>, and <code>CONTROLLER_URL</code>.
-                  Use exact IPv4 flow matches; the included switch app supports
-                  them.
-                </p>
-                <pre>python -m collector.agent</pre>
-              </div>
-              <Network size={20} />
-            </div>
-            <div className="guide-step">
-              <span>03</span>
-              <div>
-                <h3>Train with real, labeled captures</h3>
-                <p>
-                  Prepare the documented five-feature CSV with labels and
-                  flow-family group IDs. Install the artifact and its SHA-256.
-                  Restart the backend to activate the model.
-                </p>
-                <pre>python -m ml.train data/windows.csv</pre>
-              </div>
-              <Cpu size={20} />
-            </div>
-            <div className="guide-step">
-              <span>04</span>
-              <div>
-                <h3>Review before responding</h3>
-                <p>
-                  Validate the model on your network. Enable mitigation on both
-                  the backend and collector when ready. An operator can then
-                  request scoped, temporary rules from an incident.
-                </p>
-              </div>
-              <ShieldCheck size={20} />
-            </div>
-            <div className="guide-footer">
-              <Terminal size={16} />
-              <span>
-                Full setup, feature contract, and deployment instructions are in
-                the project README.
-              </span>
-            </div>
+            {token && user && data ? (
+              <NetworkSetup
+                token={token}
+                user={user}
+                data={data}
+                refresh={network.refresh}
+              />
+            ) : (
+              <p className="guide-intro">
+                Sign in to configure your private workspace connection.
+              </p>
+            )}
           </Modal>
         ) : null}
       </AnimatePresence>
@@ -1819,9 +1964,34 @@ export default function App() {
               {time(selectedLatest.last_seen)}. Probability is a model estimate
               and requires investigation.
             </p>
-            {selected && selected.revision !== selectedLatest.revision ? <p className="operation-message" role="status">This incident changed in another session. Close and reopen it to review the latest notes before saving.</p> : null}
-            <label className="form-label" htmlFor="assignee">Assigned investigator</label>
-            <select id="assignee" className="form-input" disabled={!canOperate} value={assignee} onChange={e=>setAssignee(e.target.value)}><option value="">Unassigned</option>{assignable.filter(u=>u.active&&u.approved!==false&&u.role!=="viewer").map(u=><option key={u.id} value={u.id}>{u.email}</option>)}</select>
+            {selected && selected.revision !== selectedLatest.revision ? (
+              <p className="operation-message" role="status">
+                This incident changed in another session. Close and reopen it to
+                review the latest notes before saving.
+              </p>
+            ) : null}
+            <label className="form-label" htmlFor="assignee">
+              Assigned investigator
+            </label>
+            <select
+              id="assignee"
+              className="form-input"
+              disabled={!canOperate}
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+            >
+              <option value="">Unassigned</option>
+              {assignable
+                .filter(
+                  (u) =>
+                    u.active && u.approved !== false && u.role !== "viewer",
+                )
+                .map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.email}
+                  </option>
+                ))}
+            </select>
             <label className="form-label" htmlFor="notes">
               Investigation notes
             </label>
@@ -1835,7 +2005,28 @@ export default function App() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Record the evidence and your response…"
             />
-            <button className="button secondary" disabled={!!busy||!canOperate} onClick={()=>action("save-notes",()=>request(`/api/incidents/${selectedLatest.id}`,token,{method:"PATCH",body:JSON.stringify({status:selectedLatest.status,notes,revision:selected?.revision??selectedLatest.revision,assignee_id:assignee||null})}),"Investigation notes and ownership saved.")}>Save investigation</button>
+            <button
+              className="button secondary"
+              disabled={!!busy || !canOperate}
+              onClick={() =>
+                action(
+                  "save-notes",
+                  () =>
+                    request(`/api/incidents/${selectedLatest.id}`, token, {
+                      method: "PATCH",
+                      body: JSON.stringify({
+                        status: selectedLatest.status,
+                        notes,
+                        revision: selected?.revision ?? selectedLatest.revision,
+                        assignee_id: assignee || null,
+                      }),
+                    }),
+                  "Investigation notes and ownership saved.",
+                )
+              }
+            >
+              Save investigation
+            </button>
             <div className="incident-actions">
               <button
                 className="button secondary"
@@ -1846,7 +2037,13 @@ export default function App() {
                     () =>
                       request(`/api/incidents/${selectedLatest.id}`, token, {
                         method: "PATCH",
-                        body: JSON.stringify({ status: "acknowledged", notes, revision: selected?.revision ?? selectedLatest.revision, assignee_id:assignee||null }),
+                        body: JSON.stringify({
+                          status: "acknowledged",
+                          notes,
+                          revision:
+                            selected?.revision ?? selectedLatest.revision,
+                          assignee_id: assignee || null,
+                        }),
                       }),
                     "Incident acknowledged and notes saved.",
                   )
@@ -1864,7 +2061,13 @@ export default function App() {
                     () =>
                       request(`/api/incidents/${selectedLatest.id}`, token, {
                         method: "PATCH",
-                        body: JSON.stringify({ status: "resolved", notes, revision: selected?.revision ?? selectedLatest.revision, assignee_id:assignee||null }),
+                        body: JSON.stringify({
+                          status: "resolved",
+                          notes,
+                          revision:
+                            selected?.revision ?? selectedLatest.revision,
+                          assignee_id: assignee || null,
+                        }),
                       }),
                     "Incident resolved. Active rules retain their own expiry.",
                   )

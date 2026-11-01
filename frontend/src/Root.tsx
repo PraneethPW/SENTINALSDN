@@ -166,20 +166,20 @@ function WorkspaceGate() {
         <span className="entry-shield">
           <ShieldCheck size={37} strokeWidth={1} />
         </span>
-        <p className="lp-kicker">ACCOUNT CREATED / ACCESS PENDING</p>
+        <p className="lp-kicker">WORKSPACE ACCESS / RESTRICTED</p>
         <h1>
-          You’re on the list,
+          Access needs review,
           <br />
           <em>{user.display_name || "welcome"}.</em>
         </h1>
         <p>
-          Your account is ready. A workspace administrator needs to approve
-          access before you can view network telemetry.
+          Your account exists, but access to this team workspace is currently
+          restricted. Contact the administrator who manages this workspace.
         </p>
         <div className="entry-checks">
           <span>
             <Check size={15} />
-            Account registered
+            Account recognized
           </span>
           <span>
             <Check size={15} />
@@ -248,10 +248,10 @@ function Privacy() {
         </p>
         <h2>Workspace access</h2>
         <p>
-          This is a shared network workspace. Newly registered accounts need
-          administrator approval. Approved users can view the network evidence
-          available to their role; registration itself does not expose
-          operational data.
+          New registrations create a private workspace owned by the registrant.
+          Existing research-lab memberships stay separate. Team accounts have
+          scoped roles; collectors authenticate with a workspace-specific key. A
+          workspace never inherits another user’s operational measurements.
         </p>
         <h2>Network measurements</h2>
         <p>

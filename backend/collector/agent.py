@@ -77,6 +77,7 @@ class Agent:
         self.token = os.environ["COLLECTOR_TOKEN"]
         self.controller = os.getenv("CONTROLLER_URL", "http://127.0.0.1:8080").rstrip("/")
         self.collector_id = os.getenv("COLLECTOR_ID", "sdn-edge-01")
+        self.source_type = os.getenv("SENTINEL_SOURCE", "sdn_controller")
         self.interval = max(1, float(os.getenv("POLL_SECONDS", "30")))
         self.switch_allowlist = set(filter(None, os.getenv("MONITORED_SWITCHES", "").split(",")))
         self.mitigation = os.getenv("ALLOW_MITIGATION", "false").lower() == "true"
@@ -215,6 +216,7 @@ class Agent:
                                 "batch_id": str(uuid4()),
                                 "captured_at": datetime.now(timezone.utc).isoformat(),
                                 "collector_id": self.collector_id,
+                                "source_type": self.source_type,
                                 "switches": switches,
                                 "controller_status": status,
                                 "version": "1.1.0",

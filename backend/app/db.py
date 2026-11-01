@@ -54,10 +54,16 @@ class Database:
         rows = await self.fetch(query, params)
         return rows[0] if rows else None
 
-    async def audit(self, conn, actor, action, resource, detail=None):
+    async def audit(self, conn, actor, action, resource, detail=None, *, workspace_id=None):
+        if workspace_id is None:
+            # Account identities are globally unique; collector names are not.
+            row = await (
+                await conn.execute("SELECT workspace_id FROM users WHERE id::text=%s", (str(actor),))
+            ).fetchone()
+            workspace_id = row["workspace_id"] if row else "00000000-0000-0000-0000-000000000001"
         await conn.execute(
-            "INSERT INTO audit_log(actor,action,resource,detail) VALUES (%s,%s,%s,%s)",
-            (str(actor), action, str(resource), Jsonb(detail or {})),
+            "INSERT INTO audit_log(actor,action,resource,detail,workspace_id) VALUES (%s,%s,%s,%s,%s)",
+            (str(actor), action, str(resource), Jsonb(detail or {}), workspace_id),
         )
 
 

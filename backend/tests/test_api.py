@@ -39,7 +39,11 @@ def client(monkeypatch):
     with psycopg.connect(TEST_URL) as conn:
         conn.execute(Path("app/schema.sql").read_text())
         for migration in sorted(Path("app/migrations").glob("*.sql")):
-            conn.execute(migration.read_text())
+            version = int(migration.name.split("_", 1)[0])
+            if not conn.execute(
+                "SELECT 1 FROM sentinel.schema_versions WHERE version=%s", (version,)
+            ).fetchone():
+                conn.execute(migration.read_text())
         conn.execute(
             "TRUNCATE oauth_states,oauth_handoffs,oauth_link_tickets,ai_reports,audit_log,commands,incidents,flows,batches,collectors,ws_tickets,sessions,login_attempts,users RESTART IDENTITY CASCADE"
         )
@@ -183,7 +187,7 @@ def test_csv_export_and_provider_missing_state(client):
     headers = auth(client)
     response = client.get("/api/flows/export", headers=headers)
     assert response.status_code == 200
-    assert "observed_at,switch_id,source_ip" in response.text
+    assert "observed_at,collector_id,switch_id,source_ip" in response.text
     assert (
         client.post(
             "/api/intelligence/explain", headers=headers, json={"incident_id": str(uuid4())}

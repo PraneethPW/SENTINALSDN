@@ -376,7 +376,7 @@ export default function Landing() {
                 Your circle.
               </h3>
               <p>
-                Account registration, administrator approval, and clear viewer,
+                A private workspace at registration, your own collector, and clear viewer,
                 operator, and administrator roles.
               </p>
             </Tilt>
@@ -469,7 +469,7 @@ export default function Landing() {
               <p>
                 These are facts from the installed model artifact. Public
                 laboratory evaluation, with its limits visible. Operational
-                traffic stays inside your approved workspace.
+                traffic stays inside your private workspace.
               </p>
             </motion.div>
             <div className="lp-number-grid">
@@ -563,7 +563,7 @@ export default function Landing() {
             {[
               {
                 q: "What happens after I register?",
-                a: "You can sign in to your account immediately. Because this is a shared network workspace, an administrator approves access before any operational telemetry is visible.",
+                a: "You immediately own a private, empty workspace. Download its collector setup to connect your SDN controller or start an isolated real Mininet lab. Other users’ traffic and incidents never appear in your workspace.",
               },
               {
                 q: "Can I run everything locally?",
@@ -575,7 +575,7 @@ export default function Landing() {
               },
               {
                 q: "What does Google sign-in access?",
-                a: "The integration requests only basic identity: your Google account identifier, verified email, and profile name. Workspace approval is still required.",
+                a: "The integration requests only basic identity: your Google account identifier, verified email, and profile name. Your private workspace is created immediately; existing accounts keep their workspace permissions.",
               },
             ].map((item) => (
               <details key={item.q}>

@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+export SENTINEL_SOURCE=isolated_lab
 mkdir -p /var/run/openvswitch /var/log/openvswitch /etc/openvswitch
 [ -f /etc/openvswitch/conf.db ] || ovsdb-tool create /etc/openvswitch/conf.db /usr/share/openvswitch/vswitch.ovsschema
 ovsdb-server --remote=punix:/var/run/openvswitch/db.sock --pidfile --overwrite-pidfile --detach

@@ -22,42 +22,47 @@ def signup(client, **extra):
     )
 
 
-def test_registration_cannot_expose_shared_telemetry_or_escalate_roles(client):
+def test_registration_creates_private_workspace_without_exposing_lab(client):
+    from test_api import batch, TOKEN
+
+    client.post("/api/collector/batches", json=batch(), headers={"Authorization": "Bearer " + TOKEN})
     r = signup(client, role="admin", approved=True)
     assert r.status_code == 201
     data = r.json()
-    assert data["user"]["role"] == "viewer" and data["user"]["approved"] is False
+    assert data["user"]["role"] == "admin" and data["user"]["approved"] is True
+    assert data["user"]["workspace_id"] != "00000000-0000-0000-0000-000000000001"
     h = {"Authorization": "Bearer " + data["token"]}
-    assert client.get("/api/auth/me", headers=h).status_code == 200
-    for path in ["/api/snapshot", "/api/users", "/api/flows", "/api/intelligence/reports"]:
-        assert client.get(path, headers=h).status_code == 403
-    assert client.post("/api/auth/ws-ticket", headers=h).status_code == 403
+    mine = client.get("/api/snapshot", headers=h).json()
+    assert mine["flows"] == [] and mine["collectors"] == []
+    assert mine["workspace"]["kind"] == "private"
+    assert mine["workspace"]["has_measurements"] is False
+    assert len(client.get("/api/users", headers=h).json()) == 1
+    assert client.post("/api/auth/ws-ticket", headers=h).status_code == 200
     assert signup(client).status_code == 409
     assert client.post("/api/auth/logout", headers=h).status_code == 200
     assert client.get("/api/auth/me", headers=h).status_code == 401
 
 
-def test_approval_unlocks_existing_authenticated_identity(client):
+def test_lab_admin_cannot_approve_or_change_a_private_workspace_owner(client):
     r = signup(client).json()
     h = {"Authorization": "Bearer " + r["token"]}
-    admin = auth(client)
-    patched = client.patch(
-        "/api/users/" + r["user"]["id"],
-        headers=admin,
-        json={"active": True, "role": "viewer", "approved": True},
-    )
-    assert patched.status_code == 200
-    assert client.get("/api/auth/me", headers=h).json()["approved"] is True
-    assert client.get("/api/snapshot", headers=h).status_code == 200
     assert (
         client.patch(
             "/api/users/" + r["user"]["id"],
-            headers=admin,
-            json={"active": True, "role": "viewer", "approved": False},
+            headers=auth(client),
+            json={"active": True, "role": "viewer", "approved": True},
         ).status_code
-        == 200
+        == 404
     )
-    assert client.get("/api/snapshot", headers=h).status_code == 401
+    assert (
+        client.patch(
+            "/api/users/" + r["user"]["id"],
+            headers=h,
+            json={"active": True, "role": "viewer", "approved": True},
+        ).status_code
+        == 409
+    )
+    assert client.get("/api/auth/me", headers=h).json()["role"] == "admin"
 
 
 @pytest.mark.parametrize(
@@ -133,7 +138,7 @@ def test_google_handoff_is_bound_to_browser_and_one_use(client):
     )
     good = client.post("/api/auth/google/exchange", json={"code": code, "verifier": verifier})
     assert good.status_code == 200
-    assert good.json()["user"]["approved"] is False
+    assert good.json()["user"]["approved"] is True
     assert (
         client.post("/api/auth/google/exchange", json={"code": code, "verifier": verifier}).status_code == 401
     )
@@ -209,7 +214,7 @@ def start_google(client, claims, **extra):
     return verifier, query["state"][0]
 
 
-def test_verified_google_callback_creates_pending_account_and_bound_handoff(client, google_provider):
+def test_verified_google_callback_creates_private_workspace_and_bound_handoff(client, google_provider):
     verifier, state = start_google(client, google_provider)
     r = client.get(
         "/api/auth/google/callback",
@@ -220,10 +225,11 @@ def test_verified_google_callback_creates_pending_account_and_bound_handoff(clie
     code = parse_qs(urlparse(r.headers["location"]).fragment)["code"][0]
     result = client.post("/api/auth/google/exchange", json={"code": code, "verifier": verifier})
     assert result.status_code == 200
-    assert result.json()["user"]["approved"] is False and result.json()["user"]["password_enabled"] is False
+    assert result.json()["user"]["approved"] is True and result.json()["user"]["password_enabled"] is False
+    assert result.json()["user"]["role"] == "admin"
     assert (
         client.get("/api/snapshot", headers={"Authorization": "Bearer " + result.json()["token"]}).status_code
-        == 403
+        == 200
     )
 
 

@@ -20,8 +20,8 @@ export function TrafficChart({ data }: { data: Snapshot | null }) {
   return (
     <div className="chart-container">
       <div className="chart-axis">
-        <span>{compact(max, "bps")}</span>
-        <span>{compact(max / 2, "bps")}</span>
+        <span>{series.length ? compact(max, "bps") : "—"}</span>
+        <span>{series.length ? compact(max / 2, "bps") : "—"}</span>
         <span>0</span>
       </div>
       <div className="chart-inner">

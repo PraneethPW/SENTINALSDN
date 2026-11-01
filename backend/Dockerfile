@@ -6,6 +6,8 @@ WORKDIR /app
 COPY requirements.lock ./
 RUN pip install --no-cache-dir -r requirements.lock
 COPY app ./app
+COPY collector ./collector
+COPY lab ./lab
 COPY artifacts ./artifacts
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh && chown -R sentinel:sentinel /app

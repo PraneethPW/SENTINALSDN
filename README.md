@@ -196,11 +196,17 @@ The supplied artifact expects 30-second observations. Windows outside ±5 second
 
 ## Landing, registration and Google sign-in
 
-The public homepage is `/`. Email sign-in is `/auth/sign-in`, registration is `/auth/register`, the account approval screen is `/account`, and the authenticated console is `/app`. The landing includes a lazy-loaded 3D signal core, pointer-responsive glass cards, scroll-linked motion, model-backed animated numbers, accessible navigation, and reduced-motion controls. `/api/public/overview` exposes only published model facts; operational telemetry remains private.
+The public homepage is `/`. Email sign-in is `/auth/sign-in`, registration is `/auth/register`, restricted team access is `/account`, and the authenticated console is `/app`. The landing includes a lazy-loaded 3D signal core, pointer-responsive glass cards, scroll-linked motion, model-backed animated numbers, accessible navigation, and reduced-motion controls. `/api/public/overview` exposes only published model facts; operational telemetry remains private.
 
-Email registration stores an Argon2 hash and creates a **pending viewer**. It does not claim inbox verification or send an email. New accounts can sign in immediately, but cannot read telemetry or obtain live tickets until an administrator approves them in System settings. This is a shared workspace, not personal multi-tenant networks. Approval grants preserve the signed-in identity so the account screen can refresh into the console; revocation, deactivation and role changes revoke sessions.
+Email registration stores an Argon2 hash and immediately creates an **isolated private workspace with its registrant as administrator**. It does not claim inbox verification or send an email. New accounts enter an empty dashboard with Network setup, not an administrator-approval queue. Google-only registrations receive the same private workspace. Existing approved lab members keep their original membership and role. Migration 005 moves never-approved public registrations without an explicit approval decision stranded at pending approval into private empty workspaces; deliberately restricted team accounts remain restricted.
 
-Google uses a real web OAuth client, server-side code exchange, PKCE, state cookies, nonce and Google ID-token verification. The frontend receives a short-lived, one-use handoff bound to its browser verifier. No Google secret, access token or application session is placed in the frontend bundle or redirect URL. Google-only registrations also start as pending viewers. A matching email alone never links an existing password account: sign in with the password first, then choose **Connect Google** in System settings and authenticate the matching Google account.
+Workspace IDs come from the authenticated account or machine credential, never a client-selected query parameter. All operational reads and mutations, history, CSV exports, user management, incident assignment, AI reports, collector commands and live snapshot caches are workspace-scoped. PostgreSQL composite foreign keys guard related workspace records. Team accounts created by a workspace administrator belong only to that workspace; an email currently belongs to one workspace.
+
+**Network setup** lets an administrator name the workspace and download a private collector bundle. The ZIP includes a scoped secret in `.env`, the collector, controller app, and an optional real isolated Mininet lab. The API stores only the token hash. An existing active key must be explicitly revoked before downloading a replacement; previously collected evidence remains. A machine key cannot sign in as a user or access another workspace. No synthetic telemetry, inherited incidents, sample traffic rows, or automatic lab connection is created by registration. The first poll establishes a baseline; a subsequent poll yields actual counter deltas. The UI distinguishes console connectivity, collector/controller status, and last measured flow time.
+
+The bundled Docker lab generates bounded, namespace-isolated ICMP/UDP traffic; it does not capture normal host traffic. It requires privileged Linux containers. Existing-controller instructions are included for actual SDN networks. ML artifacts and public evaluation facts are shared pretrained research resources, not measurements or accuracy estimates from a newly registered network.
+
+Google uses a real web OAuth client, server-side code exchange, PKCE, state cookies, nonce and Google ID-token verification. The frontend receives a short-lived, one-use handoff bound to its browser verifier. No Google secret, access token or application session is placed in the frontend bundle or redirect URL. A matching email alone never links an existing password account: sign in with the password first, then choose **Connect Google** in System settings and authenticate the matching Google account.
 
 Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` on the backend. The secret stays out of Git and frontend variables. In Google Cloud, configure:
 
@@ -214,7 +220,7 @@ For the Docker local stack, put optional `LOCAL_GOOGLE_CLIENT_ID` and `LOCAL_GOO
 
 ## Release verification
 
-Sentinel 1.2: **54 backend + 10 frontend tests passed**; local PostgreSQL recovery, live browser workflows, mobile layout, concurrent connections and both cloud deployments verified. See the detailed record for scope and model limits.
+Sentinel 1.3: **59 backend + 13 frontend tests passed**; local PostgreSQL recovery, live browser workflows, mobile layout, concurrent connections and both cloud deployments verified. See the detailed record for scope and model limits.
 
 ## Deployment and verification
 

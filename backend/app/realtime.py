@@ -56,20 +56,23 @@ class LiveHub:
                 logging.getLogger(__name__).exception("Live revision read failed; retrying")
             await asyncio.sleep(0.5)
 
-    async def snapshot(self, minutes):
+    async def snapshot(self, minutes, workspace_id):
         from app.api import snapshot
 
-        lock = self.locks.setdefault(minutes, asyncio.Lock())
+        key = (str(workspace_id), minutes)
+        if len(self.locks) > 512:
+            self.locks = {k: lock for k, lock in self.locks.items() if lock.locked() or k == key}
+        lock = self.locks.setdefault(key, asyncio.Lock())
         async with lock:
-            cached = self.cache.get(minutes)
+            cached = self.cache.get(key)
             if cached and time.monotonic() - cached[0] < 5:
                 return cached[1]
             revision = self.revision
-            data = await snapshot(minutes)
+            data = await snapshot(minutes, workspace_id=workspace_id)
             data["revision"] = str(revision)
             # Do not cache across a revision invalidation while the SQL snapshot was built.
             if revision == self.revision:
-                self.cache[minutes] = (time.monotonic(), data)
+                self.cache[key] = (time.monotonic(), data)
             return data
 
 

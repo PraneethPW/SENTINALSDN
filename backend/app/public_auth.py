@@ -22,6 +22,13 @@ from app.security import digest, passwords, public_user, identity_user
 router = APIRouter(prefix="/api")
 
 
+async def personal_workspace(conn, name, email):
+    workspace_id = uuid4()
+    label = (name.strip() or email.split("@", 1)[0])[:64] + "'s network"
+    await conn.execute("INSERT INTO workspaces(id,name) VALUES (%s,%s)", (workspace_id, label))
+    return workspace_id
+
+
 def challenge(verifier: str) -> str:
     return base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
 
@@ -83,7 +90,7 @@ async def auth_config():
         "google": bool(
             config.google_client_id and config.google_client_secret and config.google_redirect_uri
         ),
-        "access": "administrator_approval",
+        "access": "private_workspace",
     }
 
 
@@ -131,10 +138,11 @@ async def register(body: Registration):
         await conn.execute("SELECT pg_advisory_xact_lock(739142020)")
         if await (await conn.execute("SELECT id FROM users WHERE email=%s", (body.email,))).fetchone():
             raise HTTPException(409, "An account already uses this email. Sign in instead.")
+        workspace_id = await personal_workspace(conn, body.display_name, body.email)
         user = await (
             await conn.execute(
-                "INSERT INTO users(id,email,display_name,password_hash,role,approved) VALUES (%s,%s,%s,%s,'viewer',false) RETURNING *",
-                (uuid4(), body.email, body.display_name, encoded),
+                "INSERT INTO users(id,email,display_name,password_hash,role,approved,workspace_id) VALUES (%s,%s,%s,%s,'admin',true,%s) RETURNING *",
+                (uuid4(), body.email, body.display_name, encoded, workspace_id),
             )
         ).fetchone()
         await db.audit(
@@ -142,7 +150,7 @@ async def register(body: Registration):
             user["id"],
             "account.registered",
             user["id"],
-            {"provider": "password", "approval": "pending"},
+            {"provider": "password", "workspace": "private"},
         )
         return await session_result(conn, user)
 
@@ -300,10 +308,11 @@ async def google_callback(
                     return finish("/auth/sign-in?error=existing_email")
                 if not config.registration_enabled:
                     return finish("/auth/sign-in?error=registration_closed")
+                workspace_id = await personal_workspace(conn, str(claims.get("name", "")), email)
                 user = await (
                     await conn.execute(
-                        "INSERT INTO users(id,email,display_name,password_hash,role,approved,password_enabled) VALUES (%s,%s,%s,'!google-only','viewer',false,false) RETURNING *",
-                        (uuid4(), email, str(claims.get("name", ""))[:80]),
+                        "INSERT INTO users(id,email,display_name,password_hash,role,approved,password_enabled,workspace_id) VALUES (%s,%s,%s,'!google-only','admin',true,false,%s) RETURNING *",
+                        (uuid4(), email, str(claims.get("name", ""))[:80], workspace_id),
                     )
                 ).fetchone()
                 await conn.execute(
@@ -315,7 +324,7 @@ async def google_callback(
                     user["id"],
                     "account.registered",
                     user["id"],
-                    {"provider": "google", "approval": "pending"},
+                    {"provider": "google", "workspace": "private"},
                 )
         if not user["active"]:
             return finish("/auth/sign-in?error=account_unavailable")

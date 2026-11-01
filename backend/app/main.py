@@ -22,6 +22,7 @@ from app.realtime import hub
 from app.operations import router as operations_router
 from app.security import digest
 from app.public_auth import router as public_auth_router
+from app.workspaces import router as workspace_router
 
 logging.basicConfig(level=settings().log_level)
 logger = logging.getLogger("sentinel")
@@ -55,7 +56,7 @@ async def lifespan(app):
 
 app = FastAPI(
     title="Sentinel SDN",
-    version="1.2.0",
+    version="1.3.0",
     lifespan=lifespan,
     docs_url="/docs" if settings().environment != "production" else None,
     redoc_url=None,
@@ -70,6 +71,7 @@ app.include_router(router)
 app.include_router(ingest_router)
 app.include_router(operations_router)
 app.include_router(public_auth_router)
+app.include_router(workspace_router)
 
 
 @app.middleware("http")
@@ -130,7 +132,7 @@ async def request_boundary(request, call_next):
 
 @app.get("/health/live")
 async def live():
-    return {"status": "alive", "version": "1.2.0"}
+    return {"status": "alive", "version": "1.3.0"}
 
 
 @app.get("/health/ready")
@@ -167,13 +169,13 @@ async def live_socket(socket: WebSocket):
         await socket.accept()
         while True:
             valid = await db.one(
-                "SELECT 1 FROM sessions s JOIN users u ON u.id=s.user_id WHERE token_hash=%s AND expires_at>now() AND u.active AND u.approved",
+                "SELECT u.workspace_id FROM sessions s JOIN users u ON u.id=s.user_id WHERE token_hash=%s AND expires_at>now() AND u.active AND u.approved",
                 (session["token_hash"],),
             )
             if not valid:
                 await socket.close(code=4401)
                 return
-            await socket.send_json(jsonable_encoder(await hub.snapshot(minutes)))
+            await socket.send_json(jsonable_encoder(await hub.snapshot(minutes, valid["workspace_id"])))
             async with hub.changed:
                 try:
                     await asyncio.wait_for(hub.changed.wait(), timeout=5)

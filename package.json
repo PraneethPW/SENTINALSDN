@@ -9,10 +9,16 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "npm --prefix frontend run dev",
+    "dev": "node scripts/local.mjs up",
     "build": "npm --prefix frontend run build",
     "infra:plan": "cd backend && npx --yes @railway/cli@5.71.0 config plan",
-    "infra:apply": "cd backend && npx --yes @railway/cli@5.71.0 config apply"
+    "infra:apply": "cd backend && npx --yes @railway/cli@5.71.0 config apply",
+    "local:up": "node scripts/local.mjs up",
+    "local:down": "node scripts/local.mjs down",
+    "local:status": "node scripts/local.mjs status",
+    "local:logs": "node scripts/local.mjs logs",
+    "local:credentials": "node scripts/local.mjs credentials",
+    "dev:ui": "npm --prefix frontend run dev"
   },
   "devDependencies": {
     "railway": "3.16.0"

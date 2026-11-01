@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from app.config import settings
 from app.detector import detector
 from app.main import app
-from app.security import digest, passwords
+from app.security import passwords
 
 TEST_URL = os.getenv("TEST_DATABASE_URL", "")
 pytestmark = pytest.mark.skipif(
@@ -25,6 +25,8 @@ TOKEN = "integration-collector-token-with-at-least-32-characters"
 def client(monkeypatch):
     if "_test" not in TEST_URL.split("?")[0].rsplit("/", 1)[-1]:
         raise RuntimeError("Integration DB name must include _test; refusing destructive fixture cleanup")
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "")
     monkeypatch.setenv("DATABASE_URL", TEST_URL)
     monkeypatch.setenv("COLLECTOR_TOKEN", TOKEN)
     monkeypatch.setenv("MITIGATION_ENABLED", "true")
@@ -32,6 +34,8 @@ def client(monkeypatch):
     settings.cache_clear()
     with psycopg.connect(TEST_URL) as conn:
         conn.execute(Path("app/schema.sql").read_text())
+        for migration in sorted(Path("app/migrations").glob("*.sql")):
+            conn.execute(migration.read_text())
         conn.execute(
             "TRUNCATE ai_reports,audit_log,commands,incidents,flows,batches,collectors,ws_tickets,sessions,login_attempts,users RESTART IDENTITY CASCADE"
         )

@@ -21,9 +21,9 @@ async def ingest(batch: Batch):
     version = detector.metadata["version"] if detector.metadata else None
     async with db.connection() as conn:
         await conn.execute(
-            """INSERT INTO collectors(id,last_seen,switches,controller_status,version)
-            VALUES (%s,%s,%s,%s,%s) ON CONFLICT(id) DO UPDATE SET last_seen=EXCLUDED.last_seen,
-            switches=EXCLUDED.switches,controller_status=EXCLUDED.controller_status,version=EXCLUDED.version
+            """INSERT INTO collectors(id,last_seen,switches,controller_status,version,topology)
+            VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT(id) DO UPDATE SET last_seen=EXCLUDED.last_seen,
+            switches=EXCLUDED.switches,controller_status=EXCLUDED.controller_status,version=EXCLUDED.version,topology=EXCLUDED.topology
             WHERE EXCLUDED.last_seen>=collectors.last_seen""",
             (
                 batch.collector_id,
@@ -31,6 +31,7 @@ async def ingest(batch: Batch):
                 Jsonb(batch.switches),
                 batch.controller_status,
                 batch.version,
+                Jsonb(batch.topology.model_dump(mode="json")),
             ),
         )
         inserted = await conn.execute(
@@ -41,13 +42,10 @@ async def ingest(batch: Batch):
             return {"accepted": 0, "duplicate": True}
         # Serialize incident grouping per collector across replicas.
         await conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (batch.collector_id,))
+        values = []
         for flow, (prediction, probability) in zip(batch.flows, predictions):
             packet_rate, byte_rate, *_ = features(flow)
-            await conn.execute(
-                """INSERT INTO flows(batch_id,collector_id,observed_at,switch_id,source_ip,
-                destination_ip,protocol,destination_port,packets,bytes,interval_seconds,duration_seconds,
-                packet_rate,byte_rate,prediction,attack_probability,model_version)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            values.append(
                 (
                     batch.batch_id,
                     batch.collector_id,
@@ -66,8 +64,18 @@ async def ingest(batch: Batch):
                     prediction,
                     probability,
                     version,
-                ),
+                )
             )
+        if values:
+            async with conn.cursor() as cursor:
+                await cursor.executemany(
+                    """INSERT INTO flows(batch_id,collector_id,observed_at,switch_id,
+                source_ip,destination_ip,protocol,destination_port,packets,bytes,interval_seconds,
+                duration_seconds,packet_rate,byte_rate,prediction,attack_probability,model_version)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    values,
+                )
+        for flow, (prediction, probability) in zip(batch.flows, predictions):
             if prediction != "attack" or flow.packets < settings().minimum_attack_packets:
                 continue
             existing = await conn.execute(

@@ -1,7 +1,6 @@
 """Run beside the SDN controller, never inside the cloud API container."""
 
 import asyncio
-import hashlib
 import json
 import logging
 import os
@@ -86,8 +85,12 @@ class Agent:
         self.tracker = CounterTracker()
         if len(self.token) < 32:
             raise ValueError("Collector token must contain at least 32 characters")
-        if not self.api.startswith("https://") and not self.api.startswith(
-            ("http://localhost:", "http://127.0.0.1:", "http://host.docker.internal:")
+        if (
+            not (os.getenv("SENTINEL_LOCAL") == "true" and self.api == "http://api:8000")
+            and not self.api.startswith("https://")
+            and not self.api.startswith(
+                ("http://localhost:", "http://127.0.0.1:", "http://host.docker.internal:")
+            )
         ):
             raise ValueError("Cloud API must use HTTPS")
 
@@ -106,7 +109,12 @@ class Agent:
     async def flush(self, api):
         for path in sorted(self.spool.glob("*.json"))[:20]:
             # Ingestion accepts one-hour backfill. Preserve older batches for operator recovery.
-            body = json.loads(path.read_text())
+            try:
+                body = json.loads(path.read_text())
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                logger.error("Corrupt queued batch quarantined: %s", path.name)
+                path.rename(path.with_suffix(".rejected"))
+                continue
             response = await api.post(f"{self.api}/api/collector/batches", json=body)
             if response.status_code == 422:
                 logger.error("Rejected batch retained for inspection: %s", path.name)
@@ -176,7 +184,7 @@ class Agent:
         ):
             while True:
                 started = time.monotonic()
-                switches, flows, status = [], [], "connected"
+                switches, flows, status, topology = [], [], "connected", {}
                 try:
                     response = await controller.get(f"{self.controller}/stats/switches")
                     response.raise_for_status()
@@ -185,6 +193,9 @@ class Agent:
                         for s in response.json()
                         if not self.switch_allowlist or str(s) in self.switch_allowlist
                     ]
+                    discovery = await controller.get(f"{self.controller}/sentinel/topology")
+                    if discovery.status_code == 200:
+                        topology = discovery.json()
                     stamp = datetime.now(timezone.utc).isoformat()
                     for switch in switches:
                         response = await controller.get(f"{self.controller}/stats/flow/{switch}")
@@ -206,7 +217,8 @@ class Agent:
                                 "collector_id": self.collector_id,
                                 "switches": switches,
                                 "controller_status": status,
-                                "version": "1.0.0",
+                                "version": "1.1.0",
+                                "topology": topology,
                                 "flows": flows[offset : offset + 1000],
                             }
                         )

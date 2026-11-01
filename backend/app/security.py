@@ -1,6 +1,5 @@
 import hashlib
 import secrets
-from datetime import datetime, timezone
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
@@ -29,7 +28,7 @@ def verify(password: str, encoded: str) -> bool:
 async def user_from_token(token: str):
     user = await db.one(
         """SELECT u.id,u.email,u.role,s.expires_at,s.token_hash FROM sessions s
-        JOIN users u ON u.id=s.user_id WHERE s.token_hash=%s AND s.expires_at>now()""",
+        JOIN users u ON u.id=s.user_id WHERE s.token_hash=%s AND s.expires_at>now() AND u.active""",
         (digest(token),),
     )
     if not user:

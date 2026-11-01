@@ -21,6 +21,12 @@ async def run_cleanup():
             "DELETE FROM batches WHERE received_at<now()-make_interval(days=>%s) AND NOT EXISTS(SELECT 1 FROM flows WHERE batch_id=batches.id)",
             (settings().retention_days,),
         )
+        await conn.execute(
+            "DELETE FROM realtime_events WHERE created_at<now()-interval '7 days' AND id<(SELECT COALESCE(max(id),0) FROM realtime_events)"
+        )
+        await conn.execute(
+            "UPDATE ai_reports SET status='failed' WHERE status='pending' AND created_at<now()-interval '2 minutes'"
+        )
         await conn.execute("DELETE FROM ws_tickets WHERE expires_at<now()")
         await conn.execute("DELETE FROM sessions WHERE expires_at<now()")
         await conn.execute("DELETE FROM login_attempts WHERE attempted_at<now()-interval '1 day'")

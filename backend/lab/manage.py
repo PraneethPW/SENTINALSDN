@@ -3,14 +3,13 @@
 import argparse
 import os
 import subprocess
-from pathlib import Path
 
 from app.config import settings
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("action", choices=["build", "start", "stop", "logs"])
 parser.add_argument("--context", default="default")
-parser.add_argument("--api", default="http://host.docker.internal:8000")
+parser.add_argument("--api", default="http://host.docker.internal:8100")
 args = parser.parse_args()
 docker = ["docker", "--context", args.context]
 if args.action == "build":
@@ -30,6 +29,12 @@ elif args.action == "start":
             "--name",
             "sentinel-sdn-lab",
             "--privileged",
+            "--restart",
+            "unless-stopped",
+            "--volume",
+            "sentinel-cloud-spool:/var/lib/sentinel/spool",
+            "--env",
+            "SPOOL_DIRECTORY=/var/lib/sentinel/spool",
             "--add-host",
             "host.docker.internal:host-gateway",
             "--env",

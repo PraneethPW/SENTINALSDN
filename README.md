@@ -2,7 +2,7 @@
 
 **Machine Learning-Based DDoS Attack Detection in Software Defined Networks.**
 
-A React defense console backed by measured OpenFlow telemetry, PostgreSQL persistence, a trained Random Forest classifier, operator-controlled mitigation, and optional OpenRouter analysis. There is no seeded dashboard traffic, random alert generator, or invented model accuracy. The animated Three.js hero is explicitly decorative.
+A React defense console backed by measured OpenFlow telemetry, PostgreSQL persistence, a validated Extra Trees classifier, operator-controlled mitigation, and optional OpenRouter analysis. There is no seeded dashboard traffic, random alert generator, or invented model accuracy. The animated Three.js hero is explicitly decorative.
 
 ## Stack
 
@@ -11,7 +11,7 @@ A React defense console backed by measured OpenFlow telemetry, PostgreSQL persis
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, Three.js / React Three Fiber, Framer Motion |
 | API | Python 3.12, FastAPI, psycopg 3 async pool, authenticated WebSockets |
 | Database | Neon PostgreSQL in production; real PostgreSQL 17 for local verification |
-| ML | scikit-learn Random Forest, five measured flow features, group-held-out evaluation |
+| ML | scikit-learn Extra Trees, five measured flow features, separate group training/validation/test partitions |
 | SDN | OpenFlow 1.3, Open vSwitch, controller-side collector; included OS-Ken controller and Mininet lab |
 | AI | OpenRouter `openrouter/free`, optional, never in the detection or mitigation decision path |
 | Deployment | Backend Docker image on Railway; frontend on Vercel |
@@ -21,7 +21,7 @@ A React defense console backed by measured OpenFlow telemetry, PostgreSQL persis
 ```text
 Sentinel-SDN/
 ├── frontend/
-│   ├── src/components/       # Three.js scene, measured charts, discovered switch membership
+│   ├── src/components/       # Three.js scene, measured charts, LLDP topology and port inspection
 │   ├── src/App.tsx          # Overview, traffic, topology, incidents, intelligence, system
 │   ├── src/useNetwork.ts    # Authenticated snapshots, live updates, reconnect/backoff
 │   └── vercel.json          # Build, routing, security headers
@@ -72,39 +72,31 @@ The current live feed comes from the real Mininet/OVS lab on the development Mac
 
 ## Run locally
 
-Requirements: Node 22+, Python 3.12, and PostgreSQL (Neon works locally too). Docker is only needed for the optional SDN lab.
+Requirements: Node 22+, Docker and Docker Compose. On macOS install the reputable packages with `brew install colima docker docker-compose`. The launcher starts a separate Colima profile named `sentinel-sdn` (4 CPUs, 6 GiB RAM) without changing your existing Docker context. Linux uses the default Docker context; set `SENTINEL_DOCKER_CONTEXT` to override.
 
 ```bash
-cd backend
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.lock
-pip install -e '.[dev]'
-cp .env.example .env
-```
-
-Set `DATABASE_URL` to your own database, set a cryptographically random `COLLECTOR_TOKEN` of at least 32 characters, and set `MODEL_SHA256` to the actual artifact digest. Never commit `.env`. Generate the token and digest locally:
-
-```bash
-python -c "import secrets; print(secrets.token_urlsafe(48))"
-python -c "import hashlib,pathlib; print(hashlib.sha256(pathlib.Path('artifacts/model.joblib').read_bytes()).hexdigest())"
-python -m app.db
-python -m app.admin your@email.com
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log
-```
-
-The administrator command prompts securely for a password of at least 14 characters. There are no default production accounts. Create viewer/operator accounts with `--role viewer` or `--role operator`.
-
-In another terminal:
-
-```bash
-cd frontend
-npm ci
-cp .env.example .env.local
+cd "/Users/praneethreddy/Freelance Projects /Sentinel-SDN"
 npm run dev
+# Same command: npm run local:up
+npm run local:credentials
 ```
 
-Open the Vite URL and sign in. `VITE_API_URL` is public configuration; database credentials, collector secrets, and provider keys must never be put in a `VITE_*` variable.
+Open **http://localhost:5180** and sign in using the generated local credentials. The API is **http://localhost:8100**. Allow about 60 seconds for controller discovery and the first 30-second measurement. This starts a real local PostgreSQL database, API, trained inference, frontend, and isolated three-switch Mininet network. It does **not** use Railway, Vercel, Neon, or OpenRouter. Initial image builds need internet; after images are built the core local stack works without cloud services. Local AI summaries show an explicit unavailable state unless separately configured.
+
+Secrets are generated once in ignored, permission-restricted `.env.local-stack`. Accounts, measurements and queued deliveries persist in Docker volumes. `local:down` keeps those volumes. The independent local collector and the Mac's cloud-feed collector have different IDs, secrets and databases.
+
+```bash
+npm run local:status
+npm run local:logs
+npm run local:down
+# Frontend hot reload, after local:up:
+npm --prefix frontend ci
+npm run dev:ui
+```
+
+The hot-reload frontend proxies API and WebSocket requests to the local API on port 8100, including when Vercel environment files are present. The Docker frontend uses its own same-origin proxy. Never put database credentials, collector secrets or provider keys in `VITE_*` variables.
+
+For a native Python API instead, use Python 3.12, `backend/requirements.lock`, and `pip install -e '.[dev]'`. Copy `backend/.env.example` to `.env`, configure your own PostgreSQL URL and collector secret, run `python -m app.db`, then `python -m app.admin your@email.com` and `uvicorn app.main:app --port 8100`. The admin CLI prompts securely for a 14-character-or-longer password. Production does not create bootstrap accounts.
 
 ## Connect a real SDN network
 
@@ -131,11 +123,11 @@ The agent persists pending batches before delivery, retries idempotently, and ca
 
 The lab uses Linux namespaces, Open vSwitch's userspace datapath, an OS-Ken OpenFlow controller, and actual ICMP/UDP traffic among three hosts. Lab hosts have no default route to the public internet. It does not replay the dataset or invent telemetry. The management container needs outbound access to the API. Keep the privileged container confined to a dedicated lab VM.
 
-On macOS, use a separate Colima profile (this project was verified using `sentinel-sdn`, 2 CPUs, 3 GiB RAM). Do not change an existing Docker context:
+On macOS, use a separate Colima profile (this project was verified using `sentinel-sdn`, 4 CPUs, 6 GiB RAM). Do not change an existing Docker context:
 
 ```bash
-brew install colima docker
-colima start sentinel-sdn --vm-type vz --cpus 2 --memory 3 --disk 12 --activate=false --ssh-config=false --mount none
+brew install colima docker docker-compose
+colima start sentinel-sdn --vm-type vz --cpus 4 --memory 6 --disk 12 --activate=false --ssh-config=false --mount none
 cd backend
 source .venv/bin/activate
 python -m lab.manage build --context colima-sentinel-sdn
@@ -143,7 +135,7 @@ python -m lab.manage start --context colima-sentinel-sdn
 python -m lab.manage logs --context colima-sentinel-sdn
 ```
 
-For a cloud API, add `--api https://your-backend.up.railway.app` to the `start` command. On a Linux Docker host, use the appropriate context instead. Allow about 60 seconds for discovery, a baseline, and the first measured 30-second window. The frontend stream checks for changes every three seconds (plus database/network latency); this does not change the collector's sampling interval.
+For a cloud API, add `--api https://your-backend.up.railway.app` to the `start` command. On a Linux Docker host, use the appropriate context instead. Allow about 60 seconds for discovery, a baseline, and the first measured 30-second window. Each API process checks committed PostgreSQL revisions every 500 ms and shares cached snapshots across subscribers. A five-second clock refresh expires stale collectors and rolling windows. Measurement cadence remains 30 seconds; network and database latency also apply. This is a monitoring console, not packet-by-packet capture.
 
 ```bash
 python -m lab.manage stop --context colima-sentinel-sdn
@@ -156,29 +148,31 @@ Source: Nisha Ahuja, Gaurav Singal, Debajyoti Mukhopadhyay (2020), **DDOS attack
 
 The preparation script downloaded the publisher's archive, removed 5,837 invalid/idle measurements (including negative counter deltas), removed 78,760 repeated observations from flow/port joins, and retained **19,748 observations**: 13,317 benign and 6,431 attack. Source and prepared SHA-256 values, attribution, transformations, and counts are recorded in `artifacts/model.json`.
 
-Training held out 30 endpoint/protocol groups (4,050 rows); the other 90 groups (15,698 rows) were used for training. Both directions of an endpoint pair stay in the same group across all switches and timestamps. Original independent capture IDs are unavailable, so this is a **flow-family holdout**, not an independent-capture or production-generalization claim. IPs, timestamps, switch IDs, labels, and group IDs are not input features.
+The public data is partitioned by bidirectional endpoint/protocol groups: 72 training groups (13,710 rows), 18 validation groups (1,988 rows), and 30 test groups (4,050 rows). Algorithm and threshold selection use validation data. An additional **360 actually measured benign local-lab windows** adapt the training set to the supplied bounded ICMP/UDP workload, producing 14,070 training rows and 20,108 total rows. Labels come from the known controlled workload, never classifier predictions. Capture provenance and hashes are recorded in `artifacts/model.json`; `scripts/capture_benign.py` exports that controlled workload from the independent local database.
 
-Measured at the configured **0.90 attack threshold**:
+Active artifact: **Extra Trees**, version `group-20261101T055935Z`, threshold **0.525**, SHA-256 `f07c491db78db97fa29e053efd3506c610568797194e611ca984df8a518a0fc3`.
 
-| Metric | Result |
+| Test metric | Result |
 | --- | ---: |
-| ROC AUC | 0.9898 |
-| Average precision | 0.9849 |
-| Attack precision | 99.00% |
-| Attack recall | 64.69% |
-| Accuracy | 85.04% |
-| Confusion matrix (TN, FP / FN, TP) | 2354, 11 / 595, 1090 |
+| ROC AUC | 0.98954 |
+| Average precision | 0.98414 |
+| Attack precision | 96.49% |
+| Attack recall | 84.75% |
+| Accuracy | 92.37% |
+| False-positive rate | 2.20% |
+| Confusion matrix (TN, FP / FN, TP) | 2313, 52 / 257, 1428 |
 
-The threshold trades recall for precision. Do not describe ROC AUC as accuracy. These results apply to the held-out public lab data; they do not establish production effectiveness. Mitigation stays disabled until the deployment network is independently validated. Model estimates are not calibrated certainties.
-
-To reproduce the public dataset workflow:
+The artifact passed the configured lab release gate (precision ≥95%, recall ≥80%, false-positive rate ≤3%). A later restarted lab run was reserved for live checking. These results are **not independent production validation**. Original public capture IDs are unavailable, so grouping is a flow-family proxy. Five training-group validation folds varied substantially: recall **47.29–94.99%**, precision **59.09–94.74%**. Several iterations have been reviewed on this public benchmark; it is no longer an untouched external evaluation. Collect a new independently labeled deployment dataset before making production-performance claims or enabling enforcement. IPs, timestamps, switch IDs and labels are excluded from model inputs. Scores are not calibrated certainties.
 
 ```bash
+cd backend
 python -m ml.prepare_mendeley
-python -m ml.train data/windows.csv
+python -m ml.validate_train data/windows.csv --help
+# Reproduce the adapted candidate when the recorded benign capture is available:
+python -m ml.validate_train data/windows.csv --benign-capture data/local-benign-capture.csv --output work/retrained/model.joblib
 ```
 
-Training prints the new artifact digest. Update `MODEL_SHA256` and restart the backend. Only trusted, operator-installed model artifacts may be loaded; joblib is not a safe format for untrusted uploads. There is no web model-upload endpoint.
+Review the candidate's validation/test report and integrity digest before promotion. A failed release gate cannot overwrite the active artifact through the training command. Match `MODEL_SHA256` and `DETECTION_THRESHOLD` to the promoted model and restart the API. Only trusted operator-installed artifacts may be loaded; joblib is unsafe for untrusted uploads. The bundled model is available without retraining.
 
 ### Feature contract
 
@@ -195,10 +189,14 @@ The supplied artifact expects 30-second observations. Windows outside ±5 second
 ## Incidents, mitigation, and AI
 
 - Attack probability must meet `DETECTION_THRESHOLD`, and a flow window must contain at least `MINIMUM_ATTACK_PACKETS`, before an incident is created. Related observations within two minutes update the incident. Only the latest 100 incident rows are shown in the current console.
-- Operators can acknowledge/resolve incidents and save investigation notes. Viewers have read access only.
+- Operators can assign investigations, acknowledge/resolve incidents and save notes. Revision checks reject concurrent overwrites with a conflict. Viewers have read access only. Administrators manage users, roles and activation in System; changing access revokes sessions, and the final active administrator is protected. Every user can change their password, which revokes all their sessions.
 - Set `MITIGATION_ENABLED=true` on the API and `ALLOW_MITIGATION=true` on the collector only after validation. A block matches source IP, destination IP, protocol, and destination port when available. It uses a unique cookie, priority 50,000, and a 300-second hard timeout. It does not block an entire switch or network.
 - Commands are queued in PostgreSQL with leases. The collector installs the rule and reads it back from the actual switch. Only then is it recorded as enforced. Revocation is also verified. Unconfirmed or failed commands are shown honestly. Commands over two minutes old are rejected by the collector.
 - Optional `OPENROUTER_API_KEY` enables summaries through `openrouter/free`. Counts and model evidence are sent to OpenRouter; IPs, user identity, and investigation notes are excluded. Free providers have quotas and variable availability. AI failure never disables detection, and AI never executes a rule.
+
+## Release verification
+
+Sentinel 1.1: **41 backend + 6 frontend tests passed**; local PostgreSQL recovery, live browser workflows, mobile layout, concurrent connections and both cloud deployments verified. See the detailed record for scope and model limits.
 
 ## Deployment and verification
 
@@ -210,8 +208,8 @@ cd backend && source .venv/bin/activate
 pytest -q
 # full integration suite: dedicated database whose name includes _test
 TEST_DATABASE_URL=postgresql://user:password@localhost/sentinel_test pytest -q
-# frontend strict TypeScript and production build
-cd ../frontend && npm run build
+# frontend component checks, strict TypeScript and production build
+cd ../frontend && npm test && npm run build
 ```
 
 Test fixtures exist only in the isolated test database. They are never used as product telemetry or bundled into the UI. GitHub Actions runs both build and real PostgreSQL integration tests. Database migrations use a dedicated sentinel schema, are idempotent, and are serialized with a transaction advisory lock. Retention runs automatically one minute after startup and hourly thereafter, with a database lock across replicas. Keep the provided v1 schema migration immutable when adding future numbered migrations.

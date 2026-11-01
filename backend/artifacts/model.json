@@ -1,6 +1,6 @@
 {
-  "version": "rf-20261027T095201Z",
-  "algorithm": "Random Forest",
+  "version": "group-20261101T055935Z",
+  "algorithm": "Extra Trees",
   "features": [
     "packet_rate",
     "byte_rate",
@@ -9,62 +9,305 @@
     "protocol"
   ],
   "sklearn_version": "1.9.1",
-  "trained_at": "2026-10-27T09:52:01.298933+00:00",
-  "dataset_sha256": "5b5373b0ac4c0d5db4fa63e2fa5cf2158bb9941783d26c9b785d98a2ef06277a",
-  "rows": 19748,
-  "training_rows": 15698,
+  "trained_at": "2026-11-01T05:59:35.942105+00:00",
+  "rows": 20108,
+  "public_rows": 19748,
+  "adaptation": {
+    "source": "Actual independent local Mininet run, three switches and three hosts; provided ICMP and two bounded 64-Kbit/s UDP workloads only",
+    "label": 0,
+    "label_authority": "Controlled workload configuration, not model predictions",
+    "rows": 360,
+    "captured_before": "2026-11-01T05:59:16.597182+00:00",
+    "sha256": "c99141d2e7e913b4d0b2024cf103254ce849abd98a1823642eb94f083ac31e1f",
+    "limitations": "Benign adaptation capture only. Restarted later run reserved for live verification; not production traffic."
+  },
+  "training_rows": 14070,
+  "validation_rows": 1988,
   "test_rows": 4050,
-  "split": "group holdout, 25% test, seed 42",
-  "evaluation_threshold": 0.9,
-  "training_groups": 90,
+  "training_groups": 73,
+  "validation_groups": 18,
   "test_groups": 30,
-  "roc_auc": 0.989834442694839,
-  "average_precision": 0.9849295648198726,
-  "classification_report": {
-    "0": {
-      "precision": 0.7982366904035266,
-      "recall": 0.9953488372093023,
-      "f1-score": 0.8859616108392925,
-      "support": 2365.0
-    },
-    "1": {
-      "precision": 0.9900090826521344,
-      "recall": 0.6468842729970327,
-      "f1-score": 0.782483847810481,
-      "support": 1685.0
-    },
-    "accuracy": 0.8503703703703703,
-    "macro avg": {
-      "precision": 0.8941228865278306,
-      "recall": 0.8211165551031675,
-      "f1-score": 0.8342227293248867,
-      "support": 4050.0
-    },
-    "weighted avg": {
-      "precision": 0.87802347582054,
-      "recall": 0.8503703703703703,
-      "f1-score": 0.8429097514063177,
-      "support": 4050.0
+  "dataset_sha256": "5b5373b0ac4c0d5db4fa63e2fa5cf2158bb9941783d26c9b785d98a2ef06277a",
+  "evaluation_threshold": 0.525,
+  "window_seconds": 30,
+  "selection": {
+    "algorithm": "Extra Trees",
+    "threshold": 0.525,
+    "feasible": true,
+    "metrics": {
+      "precision": 0.9518248175182482,
+      "recall": 0.8059332509270705,
+      "f2": 0.831420555980617,
+      "fpr": 0.027989821882951654,
+      "confusion_matrix": [
+        [
+          1146,
+          33
+        ],
+        [
+          157,
+          652
+        ]
+      ],
+      "classification_report": {
+        "0": {
+          "precision": 0.8795088257866462,
+          "recall": 0.9720101781170484,
+          "f1-score": 0.9234488315874295,
+          "support": 1179.0
+        },
+        "1": {
+          "precision": 0.9518248175182482,
+          "recall": 0.8059332509270705,
+          "f1-score": 0.8728246318607764,
+          "support": 809.0
+        },
+        "accuracy": 0.9044265593561368,
+        "macro avg": {
+          "precision": 0.9156668216524473,
+          "recall": 0.8889717145220595,
+          "f1-score": 0.8981367317241029,
+          "support": 1988.0
+        },
+        "weighted avg": {
+          "precision": 0.9089372147760153,
+          "recall": 0.9044265593561368,
+          "f1-score": 0.9028477362258287,
+          "support": 1988.0
+        }
+      },
+      "roc_auc": 0.986654588802184,
+      "average_precision": 0.9762176819833298
     }
   },
-  "confusion_matrix": [
-    [
-      2354,
-      11
-    ],
-    [
-      595,
-      1090
-    ]
+  "cross_validation": [
+    {
+      "precision": 0.7235528942115769,
+      "recall": 0.4729288975864318,
+      "f2": 0.508130081300813,
+      "fpr": 0.21623731459797033,
+      "confusion_matrix": [
+        [
+          1004,
+          277
+        ],
+        [
+          808,
+          725
+        ]
+      ],
+      "classification_report": {
+        "0": {
+          "precision": 0.5540838852097131,
+          "recall": 0.7837626854020296,
+          "f1-score": 0.6492078887811187,
+          "support": 1281.0
+        },
+        "1": {
+          "precision": 0.7235528942115769,
+          "recall": 0.4729288975864318,
+          "f1-score": 0.571992110453649,
+          "support": 1533.0
+        },
+        "accuracy": 0.6144278606965174,
+        "macro avg": {
+          "precision": 0.638818389710645,
+          "recall": 0.6283457914942308,
+          "f1-score": 0.6105999996173839,
+          "support": 2814.0
+        },
+        "weighted avg": {
+          "precision": 0.646406554292818,
+          "recall": 0.6144278606965174,
+          "f1-score": 0.6071425767071986,
+          "support": 2814.0
+        }
+      },
+      "roc_auc": 0.6810232139865452,
+      "average_precision": 0.7754548012771421
+    },
+    {
+      "precision": 0.9474237644584648,
+      "recall": 0.8420560747663551,
+      "f2": 0.8612120053527051,
+      "fpr": 0.02870264064293915,
+      "confusion_matrix": [
+        [
+          1692,
+          50
+        ],
+        [
+          169,
+          901
+        ]
+      ],
+      "classification_report": {
+        "0": {
+          "precision": 0.9091886082751209,
+          "recall": 0.9712973593570609,
+          "f1-score": 0.9392173189009159,
+          "support": 1742.0
+        },
+        "1": {
+          "precision": 0.9474237644584648,
+          "recall": 0.8420560747663551,
+          "f1-score": 0.8916378030677882,
+          "support": 1070.0
+        },
+        "accuracy": 0.9221194879089616,
+        "macro avg": {
+          "precision": 0.9283061863667929,
+          "recall": 0.906676717061708,
+          "f1-score": 0.9154275609843521,
+          "support": 2812.0
+        },
+        "weighted avg": {
+          "precision": 0.9237375475056252,
+          "recall": 0.9221194879089616,
+          "f1-score": 0.9211127378406575,
+          "support": 2812.0
+        }
+      },
+      "roc_auc": 0.985558011523976,
+      "average_precision": 0.9752021945061866
+    },
+    {
+      "precision": 0.6724832214765101,
+      "recall": 0.8294701986754967,
+      "f2": 0.79247073710851,
+      "fpr": 0.1104572204617474,
+      "confusion_matrix": [
+        [
+          1965,
+          244
+        ],
+        [
+          103,
+          501
+        ]
+      ],
+      "classification_report": {
+        "0": {
+          "precision": 0.9501934235976789,
+          "recall": 0.8895427795382526,
+          "f1-score": 0.9188683656768764,
+          "support": 2209.0
+        },
+        "1": {
+          "precision": 0.6724832214765101,
+          "recall": 0.8294701986754967,
+          "f1-score": 0.742772424017791,
+          "support": 604.0
+        },
+        "accuracy": 0.8766441521507288,
+        "macro avg": {
+          "precision": 0.8113383225370945,
+          "recall": 0.8595064891068747,
+          "f1-score": 0.8308203948473336,
+          "support": 2813.0
+        },
+        "weighted avg": {
+          "precision": 0.8905642156057891,
+          "recall": 0.8766441521507288,
+          "f1-score": 0.881057505825441,
+          "support": 2813.0
+        }
+      },
+      "roc_auc": 0.9591009386645241,
+      "average_precision": 0.8744620253616135
+    },
+    {
+      "precision": 0.5909090909090909,
+      "recall": 0.9498956158663883,
+      "f2": 0.8469843633655993,
+      "fpr": 0.13467293715262932,
+      "confusion_matrix": [
+        [
+          2024,
+          315
+        ],
+        [
+          24,
+          455
+        ]
+      ],
+      "classification_report": {
+        "0": {
+          "precision": 0.98828125,
+          "recall": 0.8653270628473707,
+          "f1-score": 0.9227262366081604,
+          "support": 2339.0
+        },
+        "1": {
+          "precision": 0.5909090909090909,
+          "recall": 0.9498956158663883,
+          "f1-score": 0.7285828662930345,
+          "support": 479.0
+        },
+        "accuracy": 0.8797019162526615,
+        "macro avg": {
+          "precision": 0.7895951704545454,
+          "recall": 0.9076113393568794,
+          "f1-score": 0.8256545514505975,
+          "support": 2818.0
+        },
+        "weighted avg": {
+          "precision": 0.9207364436818505,
+          "recall": 0.8797019162526615,
+          "f1-score": 0.8897259972962566,
+          "support": 2818.0
+        }
+      },
+      "roc_auc": 0.9670656678397794,
+      "average_precision": 0.8596124766664315
+    },
+    {
+      "precision": 0.7933333333333333,
+      "recall": 0.9482071713147411,
+      "f2": 0.9125766871165646,
+      "fpr": 0.02419984387197502,
+      "confusion_matrix": [
+        [
+          2500,
+          62
+        ],
+        [
+          13,
+          238
+        ]
+      ],
+      "classification_report": {
+        "0": {
+          "precision": 0.9948269001193792,
+          "recall": 0.975800156128025,
+          "f1-score": 0.9852216748768473,
+          "support": 2562.0
+        },
+        "1": {
+          "precision": 0.7933333333333333,
+          "recall": 0.9482071713147411,
+          "f1-score": 0.8638838475499092,
+          "support": 251.0
+        },
+        "accuracy": 0.9733380732314255,
+        "macro avg": {
+          "precision": 0.8940801167263563,
+          "recall": 0.962003663721383,
+          "f1-score": 0.9245527612133783,
+          "support": 2813.0
+        },
+        "weighted avg": {
+          "precision": 0.976847914956458,
+          "recall": 0.9733380732314255,
+          "f1-score": 0.9743948726517988,
+          "support": 2813.0
+        }
+      },
+      "roc_auc": 0.984915917905272,
+      "average_precision": 0.9484676548384959
+    }
   ],
-  "feature_importance": {
-    "packet_rate": 0.2809727740032998,
-    "byte_rate": 0.33049005785422386,
-    "mean_packet_size": 0.12121612650947192,
-    "duration_seconds": 0.2427492230414111,
-    "protocol": 0.02457181859159336
-  },
-  "limitations": "Holdout metrics apply only to this dataset. Validate on your deployment network before mitigation. Measured traffic from a published Mininet lab, not a production network. Original capture IDs absent; endpoint-family grouping is a proxy, not an independent-capture evaluation. Historical rows are never inserted into live telemetry.",
+  "split": "Disjoint bidirectional endpoint/protocol groups, test seed 42, validation seed 73",
   "dataset": {
     "title": "DDOS attack SDN Dataset",
     "authors": [
@@ -98,5 +341,59 @@
     },
     "limitations": "Measured traffic from a published Mininet lab, not a production network. Original capture IDs absent; endpoint-family grouping is a proxy, not an independent-capture evaluation. Historical rows are never inserted into live telemetry."
   },
-  "window_seconds": 30
+  "feature_importance": {
+    "packet_rate": 0.2630585435111776,
+    "byte_rate": 0.24678539322195903,
+    "mean_packet_size": 0.1795961409703363,
+    "duration_seconds": 0.23494143495173217,
+    "protocol": 0.07561848734479498
+  },
+  "limitations": "Public Mininet data with controlled benign-lab adaptation. Group IDs proxy capture IDs; no independent deployment evaluation or probability calibration. Validation varies substantially by traffic family. Mitigation remains disabled pending network-specific validation.",
+  "precision": 0.9648648648648649,
+  "recall": 0.8474777448071217,
+  "f2": 0.8686131386861313,
+  "fpr": 0.021987315010570826,
+  "confusion_matrix": [
+    [
+      2313,
+      52
+    ],
+    [
+      257,
+      1428
+    ]
+  ],
+  "classification_report": {
+    "0": {
+      "precision": 0.9,
+      "recall": 0.9780126849894292,
+      "f1-score": 0.9373860182370821,
+      "support": 2365.0
+    },
+    "1": {
+      "precision": 0.9648648648648649,
+      "recall": 0.8474777448071217,
+      "f1-score": 0.9023696682464455,
+      "support": 1685.0
+    },
+    "accuracy": 0.9237037037037037,
+    "macro avg": {
+      "precision": 0.9324324324324325,
+      "recall": 0.9127452148982754,
+      "f1-score": 0.9198778432417638,
+      "support": 4050.0
+    },
+    "weighted avg": {
+      "precision": 0.926986986986987,
+      "recall": 0.9237037037037037,
+      "f1-score": 0.9228174874385087,
+      "support": 4050.0
+    }
+  },
+  "roc_auc": 0.9895436038669769,
+  "average_precision": 0.9841422554315411,
+  "release_gate": {
+    "passed": true,
+    "criteria": "precision >= .95, recall >= .80, false-positive rate <= .03; fixed before testing"
+  }
 }

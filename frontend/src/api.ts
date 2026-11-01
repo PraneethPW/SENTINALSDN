@@ -1,5 +1,5 @@
 export const API = (
-  import.meta.env.VITE_API_URL || "http://localhost:8000"
+  import.meta.env.VITE_API_URL ?? ""
 ).replace(/\/$/, "");
 export type User = {
   id: string;
@@ -36,6 +36,8 @@ export type Incident = {
   bytes: number;
   model_version: string;
   status: "open" | "acknowledged" | "resolved";
+  revision: number;
+  assignee_id: string|null;
   notes: string;
 };
 export type Command = {
@@ -53,6 +55,7 @@ export type Collector = {
   controller_status: string;
   online: boolean;
   version: string;
+  topology?: { available: boolean; links: {source:string;target:string;source_port:number;target_port:number}[]; hosts: {mac:string;addresses:string[];switch_id:string;port:number}[]; ports: {switch_id:string;port:number;rx_bytes:number;tx_bytes:number;rx_dropped:number;tx_dropped:number;rx_errors:number;tx_errors:number}[] };
 };
 export type Model = {
   ready: boolean;
@@ -72,13 +75,17 @@ export type Model = {
       string,
       { precision: number; recall: number; "f1-score": number }
     >;
+    cross_validation?: {precision:number;recall:number;fpr:number}[];
     limitations: string;
   };
 };
 export type Snapshot = {
+  revision?: string;
+  reports?: {id:string;incident_id:string;status:string;content:string;model:string;created_at:string}[];
   timestamp: string;
   window_minutes: number;
   summary: {
+    open_incidents?: number;
     windows: number;
     packets: number;
     bytes: number;

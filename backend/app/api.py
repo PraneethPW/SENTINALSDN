@@ -35,7 +35,7 @@ async def login(body: Login):
         result = await conn.execute("SELECT * FROM users WHERE email=%s", (body.email.strip().lower(),))
         user = await result.fetchone()
         valid = await asyncio.to_thread(verify, body.password, user["password_hash"] if user else DUMMY_HASH)
-        if valid and user:
+        if valid and user and user["active"]:
             token = secrets.token_urlsafe(48)
             expiry = datetime.now(timezone.utc) + timedelta(hours=settings().session_hours)
             await conn.execute(
@@ -92,6 +92,9 @@ async def snapshot(minutes: int = 15):
                 (minutes,),
             )
         )[0]
+        summary["open_incidents"] = (
+            await fetch("SELECT count(*) AS n FROM incidents WHERE status != 'resolved'")
+        )[0]["n"]
         collectors = await fetch(
             "SELECT *,last_seen>now()-interval '75 seconds' AS online FROM collectors ORDER BY id"
         )
@@ -116,6 +119,9 @@ async def snapshot(minutes: int = 15):
             (minutes,),
         )
         audit = await fetch("SELECT * FROM audit_log ORDER BY id DESC LIMIT 30")
+        reports = await fetch(
+            "SELECT id,incident_id,status,content,model,created_at FROM ai_reports ORDER BY created_at DESC LIMIT 30"
+        )
     return {
         "timestamp": datetime.now(timezone.utc),
         "window_minutes": minutes,
@@ -127,6 +133,7 @@ async def snapshot(minutes: int = 15):
         "commands": commands,
         "protocols": protocols,
         "audit": audit,
+        "reports": reports,
         "model": detector.status(),
         "integrations": {
             "database": True,
@@ -144,15 +151,44 @@ async def get_snapshot(minutes: int = Query(default=15, ge=1, le=60), user=Depen
 @router.patch("/incidents/{incident_id}")
 async def update_incident(incident_id: UUID, body: IncidentUpdate, user=Depends(operator)):
     async with db.connection() as conn:
+        if body.assignee_id:
+            target = await (
+                await conn.execute(
+                    "SELECT 1 FROM users WHERE id=%s AND active AND role IN ('admin','operator')",
+                    (body.assignee_id,),
+                )
+            ).fetchone()
+            if not target:
+                raise HTTPException(422, "Assign an active administrator or operator")
         cursor = await conn.execute(
-            "UPDATE incidents SET status=%s,notes=%s WHERE id=%s RETURNING *",
-            (body.status, body.notes, incident_id),
+            "UPDATE incidents SET status=%s,notes=%s,revision=revision+1,assignee_id=CASE WHEN %s THEN %s::uuid ELSE assignee_id END WHERE id=%s AND (%s::integer IS NULL OR revision=%s) RETURNING *",
+            (
+                body.status,
+                body.notes,
+                "assignee_id" in body.model_fields_set,
+                body.assignee_id,
+                incident_id,
+                body.revision,
+                body.revision,
+            ),
         )
         incident = await cursor.fetchone()
         if not incident:
+            if await (await conn.execute("SELECT 1 FROM incidents WHERE id=%s", (incident_id,))).fetchone():
+                raise HTTPException(
+                    409, "Another operator updated this incident. Reopen it to review the latest notes."
+                )
             raise HTTPException(404, "Incident not found")
         await db.audit(
-            conn, user["id"], "incident.updated", incident_id, {"status": body.status, "notes": body.notes}
+            conn,
+            user["id"],
+            "incident.updated",
+            incident_id,
+            {
+                "status": body.status,
+                "notes": body.notes,
+                "assignee_id": str(body.assignee_id) if body.assignee_id else None,
+            },
         )
     return incident
 

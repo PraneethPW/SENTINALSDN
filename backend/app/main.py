@@ -5,19 +5,21 @@ import time
 from contextlib import asynccontextmanager, suppress
 from uuid import uuid4
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
 
-from app.api import router, snapshot
+from app.api import router
 from app.config import settings
 from app.db import db
 from app.detector import detector
 from app.ingest import router as ingest_router
 from app.maintenance import retention_loop
+from app.realtime import hub
+from app.operations import router as operations_router
 from app.security import digest
 
 logging.basicConfig(level=settings().log_level)
@@ -39,9 +41,11 @@ async def lifespan(app):
     await db.open()
     await asyncio.to_thread(detector.load)
     maintenance = asyncio.create_task(retention_loop())
+    await hub.start()
     try:
         yield
     finally:
+        await hub.stop()
         maintenance.cancel()
         with suppress(asyncio.CancelledError):
             await maintenance
@@ -50,7 +54,7 @@ async def lifespan(app):
 
 app = FastAPI(
     title="Sentinel SDN",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
     docs_url="/docs" if settings().environment != "production" else None,
     redoc_url=None,
@@ -63,6 +67,7 @@ app.add_middleware(
 )
 app.include_router(router)
 app.include_router(ingest_router)
+app.include_router(operations_router)
 
 
 @app.middleware("http")
@@ -94,6 +99,8 @@ async def request_boundary(request, call_next):
     request._receive = limited_receive
     try:
         response = await call_next(request)
+    except HTTPException as error:
+        response = JSONResponse({"detail": error.detail}, error.status_code)
     except (OperationalError, PoolTimeout):
         logger.exception("Database unavailable request_id=%s", request_id)
         response = JSONResponse({"detail": "Database temporarily unavailable", "request_id": request_id}, 503)
@@ -121,7 +128,7 @@ async def request_boundary(request, call_next):
 
 @app.get("/health/live")
 async def live():
-    return {"status": "alive", "version": "1.0.0"}
+    return {"status": "alive", "version": "1.1.0"}
 
 
 @app.get("/health/ready")
@@ -150,11 +157,12 @@ async def live_socket(socket: WebSocket):
         if not session:
             await socket.close(code=4401)
             return
-        await socket.accept()
-        minutes = int(socket.query_params.get("minutes", "15"))
-        if minutes not in (5, 15, 30, 60):
+        raw_minutes = socket.query_params.get("minutes", "15")
+        if raw_minutes not in ("5", "15", "30", "60"):
             await socket.close(code=4400)
             return
+        minutes = int(raw_minutes)
+        await socket.accept()
         while True:
             valid = await db.one(
                 "SELECT 1 FROM sessions WHERE token_hash=%s AND expires_at>now()", (session["token_hash"],)
@@ -162,8 +170,12 @@ async def live_socket(socket: WebSocket):
             if not valid:
                 await socket.close(code=4401)
                 return
-            await socket.send_json(jsonable_encoder(await snapshot(minutes)))
-            await asyncio.sleep(3)
+            await socket.send_json(jsonable_encoder(await hub.snapshot(minutes)))
+            async with hub.changed:
+                try:
+                    await asyncio.wait_for(hub.changed.wait(), timeout=5)
+                except asyncio.TimeoutError:
+                    pass
     except WebSocketDisconnect:
         pass
     except Exception:

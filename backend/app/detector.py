@@ -1,7 +1,6 @@
 import hashlib
 import json
 import logging
-from pathlib import Path
 
 import joblib
 import numpy as np
@@ -30,6 +29,9 @@ class Detector:
         self.error = "No trained model installed"
 
     def load(self):
+        self.model = None
+        self.metadata = None
+        self.error = "No trained model installed"
         config = settings()
         path = config.model_path
         if not path.exists():

@@ -2675,3 +2675,24 @@ textarea::placeholder {
     max-width: 260px;
   }
 }
+
+/* Warm graphite / champagne palette; semantic colors remain stable under live updates. */
+:root { --muted: #a2a79b; --border: #ffffff16; --panel: #191d18; }
+body { min-width:320px; background:radial-gradient(ellipse at 80% 0%,#a18d5020,transparent 45%),#111310; }
+.operations-panel{padding:24px;overflow:hidden}.operations-panel h2{font-size:20px;margin-top:8px}.operation-message{padding:12px 14px;margin:14px 0;border:1px solid #dbb77b44;border-radius:8px;background:#dbb77b0a;color:#e4cfaa;font-size:12px}
+.access-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;align-items:end;margin:18px 0}.access-form label{display:grid;gap:9px;font-size:11px;color:var(--muted)}.access-form .form-input{margin:0;width:100%;min-width:0}.password-details{margin-top:22px;border-top:1px solid var(--border);padding-top:18px}.password-details summary{cursor:pointer;color:var(--amber);font-size:12px}.history-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:18px 0}.history-toolbar input{flex:1;min-width:180px;margin:0}.operations-panel select,.history-toolbar select{background:#20251d;color:#e9e9e2;border:1px solid #ffffff20;padding:10px;border-radius:6px;max-width:100%}
+.measured-topology{height:auto!important;min-height:250px;display:block!important;padding-bottom:34px!important}.measured-graph{width:100%;height:auto;min-height:180px;position:relative;z-index:1}.measured-graph text{font:10px 'IBM Plex Mono',monospace;fill:#bdc1b3}.network-link{stroke:#666d6055;stroke-width:2;stroke-dasharray:5 7}.network-link.active{stroke:#c5ad77;animation:link-travel 5s linear infinite}.host-link{stroke:#a3b69155;stroke-width:1;fill:none}.host-marker{fill:#202a1c;stroke:#9bbd8a}.switch-marker{fill:#24291e;stroke:#6e7963;stroke-width:2}.switch-marker.online{stroke:#dbb77b;filter:drop-shadow(0 0 8px #dbb77b22)}.switch-target{cursor:pointer;outline:none}.switch-target:focus .switch-marker{stroke:#ffffff;stroke-width:3}.topology-detail{position:relative;margin:8px 20px;padding:18px;border:1px solid var(--border);border-radius:10px;background:#131710}.topology-detail strong{font-size:13px}.topology-detail .footnote{margin:10px 0}
+@keyframes link-travel{to{stroke-dashoffset:-48}}.loader-track{height:2px;background:#dbb77b20;overflow:hidden;position:sticky;top:0;z-index:70}.loader-track:after{content:'';display:block;width:35%;height:100%;background:var(--amber);animation:loader-travel 1.4s ease-in-out infinite}@keyframes loader-travel{from{transform:translateX(-110%)}to{transform:translateX(390%)}}
+.panel{transition:border-color .25s,box-shadow .25s}.panel:hover{border-color:#dbb77b26;box-shadow:0 12px 36px #00000012}.button{transition:transform .18s,background .18s,border-color .18s}.button:active:not(:disabled){transform:translateY(1px)}.operation-message[role=alert]{border-color:#dd8d7e66;color:#e4aa9d}.motion-reduced .network-link,.motion-reduced .loader-track:after{animation:none!important}
+@media(max-width:640px){.operations-panel{padding:16px}.access-form{grid-template-columns:1fr}.history-toolbar>*{width:100%}.measured-graph text{font-size:12px}.topology-detail{margin:8px}}
+@media(prefers-reduced-motion:reduce){.network-link,.loader-track:after{animation:none!important}.panel,.button{transition:none!important}}
+
+.recovery-screen{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:24px;padding:8vw}.recovery-screen h1{max-width:720px}.recovery-screen p{color:var(--muted)}.motion-off .network-link,.motion-off .loader-track:after{animation:none!important}
+
+.switch-inspector-toolbar{position:relative;z-index:2;display:flex;gap:8px;flex-wrap:wrap;padding:18px 22px 0}.switch-inspector-toolbar .button{padding:8px 16px;font-size:11px}.switch-inspector-toolbar .button[aria-pressed=true]{border-color:var(--amber);background:#dbb77b12}.eyebrow,.nav-caption{color:#a0a891}.brand small{color:#8f9984}
+
+.scroll-progress{position:fixed;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,#9bbd8a,#dbb77b);z-index:110;transform-origin:left;pointer-events:none}
+
+.topology-scroll { position:relative;overflow-x:auto;overscroll-behavior-x:contain; }
+@media(max-width:760px){.motion-toggle{display:inline-flex}.topbar-actions{gap:5px}.topbar{padding-inline:14px}}
+@media(max-width:640px){.measured-graph{min-width:640px}.measured-graph text{font-size:14px}}

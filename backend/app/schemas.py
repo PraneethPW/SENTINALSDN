@@ -40,7 +40,40 @@ class Flow(BaseModel):
         return self
 
 
+class DiscoveredLink(BaseModel):
+    source: str = Field(pattern=r"^[0-9]{1,20}$")
+    target: str = Field(pattern=r"^[0-9]{1,20}$")
+    source_port: int = Field(ge=1, le=65535)
+    target_port: int = Field(ge=1, le=65535)
+
+
+class DiscoveredHost(BaseModel):
+    mac: str = Field(pattern=r"^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$")
+    addresses: list[IPv4Address] = Field(max_length=32)
+    switch_id: str = Field(pattern=r"^[0-9]{1,20}$")
+    port: int = Field(ge=1, le=65535)
+
+
+class PortCounters(BaseModel):
+    switch_id: str = Field(pattern=r"^[0-9]{1,20}$")
+    port: int = Field(ge=1, le=65535)
+    rx_bytes: int = Field(ge=0, le=2**64 - 1)
+    tx_bytes: int = Field(ge=0, le=2**64 - 1)
+    rx_dropped: int = Field(ge=0, le=2**64 - 1)
+    tx_dropped: int = Field(ge=0, le=2**64 - 1)
+    rx_errors: int = Field(ge=0, le=2**64 - 1)
+    tx_errors: int = Field(ge=0, le=2**64 - 1)
+
+
+class DiscoveredTopology(BaseModel):
+    available: bool = False
+    links: list[DiscoveredLink] = Field(default_factory=list, max_length=2048)
+    hosts: list[DiscoveredHost] = Field(default_factory=list, max_length=4096)
+    ports: list[PortCounters] = Field(default_factory=list, max_length=4096)
+
+
 class Batch(BaseModel):
+    topology: DiscoveredTopology = Field(default_factory=DiscoveredTopology)
     batch_id: UUID
     captured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     collector_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
@@ -63,6 +96,8 @@ class Batch(BaseModel):
 
 
 class IncidentUpdate(BaseModel):
+    assignee_id: UUID | None = None
+    revision: int | None = Field(default=None, ge=1)
     status: Literal["open", "acknowledged", "resolved"]
     notes: str = Field(default="", max_length=2000)
 

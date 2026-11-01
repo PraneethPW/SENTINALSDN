@@ -9,12 +9,17 @@ import json
 from ipaddress import IPv4Address
 
 from os_ken.base import app_manager
+from os_ken.topology import api as topology_api
+
 from os_ken.app.ofctl import api
 from os_ken.lib import hub
 from os_ken.controller import ofp_event
 from os_ken.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cls
 from os_ken.ofproto import ofproto_v1_3
 from os_ken.lib.packet import ethernet, ether_types, ipv4, packet, tcp, udp
+
+
+app_manager.require_app("os_ken.topology.switches")
 
 
 class SentinelSwitch(app_manager.OSKenApp):
@@ -32,6 +37,57 @@ class SentinelSwitch(app_manager.OSKenApp):
             path, method = environ["PATH_INFO"], environ["REQUEST_METHOD"]
             if method == "GET" and path == "/stats/switches":
                 result = [dp.id for dp in api.get_datapath(self)]
+            elif method == "GET" and path == "/sentinel/topology":
+                ports = []
+                for dp in api.get_datapath(self):
+                    replies = api.send_msg(
+                        self,
+                        dp.ofproto_parser.OFPPortStatsRequest(dp, 0, dp.ofproto.OFPP_ANY),
+                        reply_cls=dp.ofproto_parser.OFPPortStatsReply,
+                        reply_multi=True,
+                    )
+                    for reply in replies:
+                        for stat in reply.body:
+                            if stat.port_no < dp.ofproto.OFPP_MAX:
+                                ports.append(
+                                    {
+                                        "switch_id": str(dp.id),
+                                        "port": stat.port_no,
+                                        **{
+                                            key: int(getattr(stat, key, 0))
+                                            for key in [
+                                                "rx_bytes",
+                                                "tx_bytes",
+                                                "rx_dropped",
+                                                "tx_dropped",
+                                                "rx_errors",
+                                                "tx_errors",
+                                            ]
+                                        },
+                                    }
+                                )
+                result = {
+                    "available": True,
+                    "links": [
+                        {
+                            "source": str(link.src.dpid),
+                            "target": str(link.dst.dpid),
+                            "source_port": link.src.port_no,
+                            "target_port": link.dst.port_no,
+                        }
+                        for link in topology_api.get_link(self)
+                    ],
+                    "hosts": [
+                        {
+                            "mac": host.mac,
+                            "addresses": list(host.ipv4),
+                            "switch_id": str(host.port.dpid),
+                            "port": host.port.port_no,
+                        }
+                        for host in topology_api.get_host(self)
+                    ],
+                    "ports": ports,
+                }
             elif method == "GET" and path.startswith("/stats/flow/"):
                 dpid = int(path.rsplit("/", 1)[-1])
                 dp = api.get_datapath(self, dpid)

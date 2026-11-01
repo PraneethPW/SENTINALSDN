@@ -1,0 +1,63 @@
+name: sentinel-local
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sentinel_local
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:?Run npm run local:up}
+    volumes: [database:/var/lib/postgresql/data]
+    ports: ['127.0.0.1:55432:5432']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sentinel -d sentinel_local']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://sentinel:${LOCAL_DB_PASSWORD}@postgres:5432/sentinel_local
+      COLLECTOR_TOKEN: ${LOCAL_COLLECTOR_TOKEN}
+      MODEL_SHA256: ${LOCAL_MODEL_SHA256}
+      DETECTION_THRESHOLD: ${LOCAL_MODEL_THRESHOLD:-0.525}
+      CORS_ORIGINS: http://localhost:5180,http://127.0.0.1:5180,http://localhost:5173,http://127.0.0.1:5173
+      BOOTSTRAP_EMAIL: ${LOCAL_ADMIN_EMAIL}
+      BOOTSTRAP_PASSWORD: ${LOCAL_ADMIN_PASSWORD}
+      MITIGATION_ENABLED: 'false'
+    ports: ['127.0.0.1:8100:8000']
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports: ['127.0.0.1:5180:80']
+    depends_on:
+      api: {condition: service_healthy}
+  lab:
+    build:
+      context: ./backend
+      dockerfile: lab/Dockerfile
+    privileged: true
+    restart: unless-stopped
+    environment:
+      SENTINEL_API_URL: http://api:8000
+      SENTINEL_LOCAL: 'true'
+      SPOOL_DIRECTORY: /var/lib/sentinel/spool
+      COLLECTOR_TOKEN: ${LOCAL_COLLECTOR_TOKEN}
+      COLLECTOR_ID: local-independent-lab
+      POLL_SECONDS: '30'
+      ALLOW_MITIGATION: 'false'
+    volumes: [spool:/var/lib/sentinel/spool]
+    depends_on:
+      api: {condition: service_healthy}
+volumes:
+  database:
+  spool:

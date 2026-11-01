@@ -45,8 +45,9 @@ import {
   Zap,
 } from "lucide-react";
 import { API, compact, protocolName, request, time } from "./api";
-import type { Incident } from "./api";
+import type { Incident, User } from "./api";
 import { useNetwork } from "./useNetwork";
+import { WorkspaceControls, FlowHistory } from "./components/WorkspaceControls";
 import { Topology, TrafficChart } from "./components/Charts";
 
 const NetworkScene = lazy(() => import("./components/NetworkScene"));
@@ -222,7 +223,7 @@ export default function App() {
   const { data, user, token, connection, error } = network;
   const systemReduced = useReducedMotion();
   const [motionOff, setMotionOff] = useState(
-    () => localStorage.getItem("sentinel.motion-off") === "true",
+    () => {try{return localStorage.getItem("sentinel.motion-off") === "true"}catch{return false}},
   );
   const reduced = !!systemReduced || motionOff;
   const [loginOpen, setLoginOpen] = useState(false),
@@ -236,6 +237,10 @@ export default function App() {
     [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"),
     [selected, setSelected] = useState<Incident | null>(null);
+  const [assignee,setAssignee]=useState("");
+  const [assignable,setAssignable]=useState<(User&{active:boolean})[]>([]);
+  const seenIncidents=useRef<Set<string>|null>(null);
+  useEffect(()=>{if(!data){seenIncidents.current=null;return;}const ids=new Set(data.incidents.map(i=>i.id));if(seenIncidents.current){const count=data.incidents.filter(i=>!seenIncidents.current!.has(i.id)&&i.status==="open").length;if(count)setToast(`${count} new model detection${count>1?"s":""} need review.`);}seenIncidents.current=ids;},[data]);
   const [notes, setNotes] = useState(""),
     [report, setReport] = useState(""),
     [analysisId, setAnalysisId] = useState("");
@@ -248,6 +253,7 @@ export default function App() {
       incident_id: string;
     }[]
   >([]);
+  const {scrollYProgress: pageProgress} = useScroll();
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -255,7 +261,7 @@ export default function App() {
   });
   const sceneY = useTransform(scrollYProgress, [0, 1], [0, reduced ? 0 : 60]);
   const openIncidents =
-    data?.incidents.filter((i) => i.status !== "resolved").length ?? 0;
+    data?.summary.open_incidents ?? data?.incidents.filter((i) => i.status !== "resolved").length ?? 0;
   const onlineCollectors =
     data?.collectors.filter(
       (c) => c.online && c.controller_status === "connected",
@@ -298,11 +304,12 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
+    if (data?.reports) { setReports(data.reports); return; }
     if (section === "intelligence" && token)
       void request<typeof reports>("/api/intelligence/reports", token)
         .then(setReports)
         .catch((e) => setToast(e.message));
-  }, [section, token, report]);
+  }, [section, token, report, data?.reports]);
 
   async function signIn(event: FormEvent) {
     event.preventDefault();
@@ -325,7 +332,8 @@ export default function App() {
   ) {
     setBusy(key);
     try {
-      await work();
+      const changed = await work();
+      if (changed && typeof changed === "object" && "notes" in changed && "revision" in changed) setSelected(changed as Incident);
       await network.refresh();
       setToast(success);
     } catch (e) {
@@ -382,6 +390,8 @@ export default function App() {
   function openIncident(incident: Incident) {
     setSelected(incident);
     setNotes(incident.notes);
+    setAssignee(incident.assignee_id ?? "");
+    if(token)void request<(User&{active:boolean})[]>("/api/users",token).then(setAssignable).catch(()=>setAssignable([]));
     setReport("");
     setAnalysisId("");
   }
@@ -446,7 +456,7 @@ export default function App() {
                         : "neutral"
                   }
                 >
-                  {flow.prediction}
+                  {flow.prediction === "attack" ? "Model flagged" : flow.prediction}
                 </Badge>
               </td>
               <td className="mono muted">{time(flow.observed_at)}</td>
@@ -483,6 +493,7 @@ export default function App() {
 
   return (
     <div className={`app-shell ${reduced ? "motion-off" : ""}`}>
+      <motion.div className="scroll-progress" aria-hidden="true" style={{scaleX:reduced?0:pageProgress}}/>
       <a href="#main" className="skip-link">
         Skip to content
       </a>
@@ -561,7 +572,7 @@ export default function App() {
                 {data?.model.ready ? "Model loaded" : "Awaiting model"}
               </small>
             </div>
-            <span className="engine-version">RF</span>
+            <span className="engine-version">ML</span>
           </div>
           <button className="nav-item" onClick={() => setGuideOpen(true)}>
             <BookOpen size={17} strokeWidth={1.5} />
@@ -569,7 +580,7 @@ export default function App() {
             <ArrowUpRight size={14} />
           </button>
           <div className="sidebar-footer">
-            <span className="version">SENTINEL / 1.0</span>
+            <span className="version">SENTINEL / 1.1</span>
             <span className="footer-dot" />{" "}
             <span>OBSERVE. UNDERSTAND. DEFEND.</span>
           </div>
@@ -613,7 +624,7 @@ export default function App() {
             <button
               className="icon-button motion-toggle"
               onClick={() => {
-                localStorage.setItem("sentinel.motion-off", String(!motionOff));
+                try {localStorage.setItem("sentinel.motion-off", String(!motionOff));} catch {/* Keep the preference in memory when storage is unavailable. */}
                 setMotionOff(!motionOff);
               }}
               aria-label={
@@ -684,14 +695,17 @@ export default function App() {
               </button>
             </div>
           </div>
-          {error ? (
+          {error || (data && connection !== "live") ? (
             <div className="connection-warning" role="status">
               <TriangleAlert size={16} />
               <span>
-                {error} {data ? "Showing the last received snapshot." : ""}
+                {error || "Live connection interrupted."} {data ? `Showing the last received snapshot from ${time(data.timestamp)}. Status and counters may be stale.` : ""}
               </span>
             </div>
           ) : null}
+          {token && connection === "connecting" ? <div className="loader-track" role="status" aria-label="Connecting to your network"/> : null}
+          {token && data && !onlineCollectors.length ? <div className="connection-warning" role="status"><Radio size={16}/><span>No collector is reporting current measurements. The console connection remains active; last known infrastructure is marked offline.</span></div> : null}
+          {section === "intelligence" && reports.some(r=>r.status!=="complete") ? <div className="operation-message" role="status">{reports.filter(r=>r.status==='pending').length} analyses in progress · {reports.filter(r=>r.status==='failed').length} provider requests failed. Detection operates independently.</div> : null}
           <AnimatePresence mode="wait">
             <motion.div
               key={section}
@@ -963,12 +977,12 @@ export default function App() {
                         with evidence.
                       </h2>
                       <p className="model-description">
-                        A Random Forest model classifies measured flow behavior.
+                        A tree ensemble model classifies measured flow behavior.
                         Every verdict stays traceable to its model version.
                       </p>
                       <div className="model-status-row">
                         <span>Classifier</span>
-                        <strong>Random Forest</strong>
+                        <strong>{data?.model.metadata?.algorithm ?? "Not installed"}</strong>
                       </div>
                       <div className="model-status-row">
                         <span>Model status</span>
@@ -1044,6 +1058,7 @@ export default function App() {
                   </p>
                 </>
               ) : null}
+              {section === "traffic" && token ? <FlowHistory token={token}/> : null}
               {section === "topology" ? (
                 <section className="panel">
                   <PanelHeading
@@ -1266,7 +1281,7 @@ export default function App() {
                       <div className="model-orbit">
                         <Cpu size={36} strokeWidth={1} />
                       </div>
-                      <h3>Random Forest classifier</h3>
+                      <h3>{data?.model.metadata?.algorithm ?? "Detection"} classifier</h3>
                       <p>
                         Five measured flow features. Group-held-out evaluation.
                         A versioned artifact with a verified SHA-256.
@@ -1289,7 +1304,7 @@ export default function App() {
                               </strong>
                             </div>
                             <div>
-                              <small>Training + test rows</small>
+                              <small>Dataset rows · all partitions</small>
                               <strong>
                                 {data.model.metadata.rows.toLocaleString()}
                               </strong>
@@ -1297,7 +1312,7 @@ export default function App() {
                             <div>
                               <small>Decision threshold</small>
                               <strong>
-                                {(data.model.threshold * 100).toFixed(0)}%
+                                {(data.model.threshold * 100).toFixed(1)}%
                               </strong>
                             </div>
                             <div>
@@ -1324,6 +1339,7 @@ export default function App() {
                           <p className="footnote">
                             {data.model.metadata.limitations}
                           </p>
+                          {data.model.metadata.cross_validation?.length ? <p className="footnote">Across training-group validation folds, attack recall ranged {Math.min(...data.model.metadata.cross_validation.map(f=>f.recall*100)).toFixed(1)}–{Math.max(...data.model.metadata.cross_validation.map(f=>f.recall*100)).toFixed(1)}%. Performance varies by traffic family; validate your network before enforcement.</p> : null}
                           <p className="mono tiny">
                             {data.model.metadata.version}
                           </p>
@@ -1453,6 +1469,7 @@ export default function App() {
                   </section>
                 </div>
               ) : null}
+              {section === "system" && token && user ? <WorkspaceControls token={token} user={user} revision={data?.revision ?? ""} onLogout={network.logout}/> : null}
               {section === "system" ? (
                 <>
                   <div className="settings-grid">
@@ -1465,7 +1482,7 @@ export default function App() {
                         {[
                           {
                             icon: Database,
-                            name: "Neon PostgreSQL",
+                            name: "PostgreSQL",
                             text: "Persistent flows, incidents, and audit history",
                             value: data?.integrations.database
                               ? "Connected"
@@ -1533,7 +1550,7 @@ export default function App() {
                       />
                       <div className="settings-content">
                         <label>API endpoint</label>
-                        <code>{API}</code>
+                        <code>{API || window.location.origin}</code>
                         <label>Current identity</label>
                         <p>{user?.email ?? "Not signed in"}</p>
                         <label>Access level</label>
@@ -1543,10 +1560,7 @@ export default function App() {
                           className="button secondary"
                           onClick={() => {
                             setMotionOff(!motionOff);
-                            localStorage.setItem(
-                              "sentinel.motion-off",
-                              String(!motionOff),
-                            );
+                            try {localStorage.setItem("sentinel.motion-off", String(!motionOff));} catch {/* In-memory preference remains available. */}
                           }}
                         >
                           {reduced ? (
@@ -1676,9 +1690,7 @@ export default function App() {
               </button>
             </form>
             <p className="footnote login-note">
-              No account yet? Run{" "}
-              <code>python -m app.admin your@email.com</code> on the configured
-              backend. There are no default credentials.
+              Need an account? Ask your workspace administrator for access. Your sign-in is private to this workspace.
             </p>
           </Modal>
         ) : null}
@@ -1807,6 +1819,9 @@ export default function App() {
               {time(selectedLatest.last_seen)}. Probability is a model estimate
               and requires investigation.
             </p>
+            {selected && selected.revision !== selectedLatest.revision ? <p className="operation-message" role="status">This incident changed in another session. Close and reopen it to review the latest notes before saving.</p> : null}
+            <label className="form-label" htmlFor="assignee">Assigned investigator</label>
+            <select id="assignee" className="form-input" disabled={!canOperate} value={assignee} onChange={e=>setAssignee(e.target.value)}><option value="">Unassigned</option>{assignable.filter(u=>u.active&&u.role!=="viewer").map(u=><option key={u.id} value={u.id}>{u.email}</option>)}</select>
             <label className="form-label" htmlFor="notes">
               Investigation notes
             </label>
@@ -1820,6 +1835,7 @@ export default function App() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Record the evidence and your response…"
             />
+            <button className="button secondary" disabled={!!busy||!canOperate} onClick={()=>action("save-notes",()=>request(`/api/incidents/${selectedLatest.id}`,token,{method:"PATCH",body:JSON.stringify({status:selectedLatest.status,notes,revision:selected?.revision??selectedLatest.revision,assignee_id:assignee||null})}),"Investigation notes and ownership saved.")}>Save investigation</button>
             <div className="incident-actions">
               <button
                 className="button secondary"
@@ -1830,7 +1846,7 @@ export default function App() {
                     () =>
                       request(`/api/incidents/${selectedLatest.id}`, token, {
                         method: "PATCH",
-                        body: JSON.stringify({ status: "acknowledged", notes }),
+                        body: JSON.stringify({ status: "acknowledged", notes, revision: selected?.revision ?? selectedLatest.revision, assignee_id:assignee||null }),
                       }),
                     "Incident acknowledged and notes saved.",
                   )
@@ -1848,7 +1864,7 @@ export default function App() {
                     () =>
                       request(`/api/incidents/${selectedLatest.id}`, token, {
                         method: "PATCH",
-                        body: JSON.stringify({ status: "resolved", notes }),
+                        body: JSON.stringify({ status: "resolved", notes, revision: selected?.revision ?? selectedLatest.revision, assignee_id:assignee||null }),
                       }),
                     "Incident resolved. Active rules retain their own expiry.",
                   )

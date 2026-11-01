@@ -2,9 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { API, ApiError, request } from "./api";
 import type { Snapshot, User } from "./api";
 
+function readSession(){try{return sessionStorage.getItem("sentinel.session.v1")}catch{return null}}
+function writeSession(token:string|null){try{if(token)sessionStorage.setItem("sentinel.session.v1",token);else sessionStorage.removeItem("sentinel.session.v1")}catch{/* In-memory auth still works when browser storage is unavailable. */}}
+function validSnapshot(value:unknown):value is Snapshot{if(!value||typeof value!=="object")return false;const d=value as Partial<Snapshot>;return typeof d.timestamp==='string'&&Number.isFinite(Date.parse(d.timestamp))&&Array.isArray(d.flows)&&Array.isArray(d.collectors)&&Array.isArray(d.incidents)&&Array.isArray(d.commands)&&Array.isArray(d.series)&&!!d.summary&&!!d.model&&!!d.integrations}
 export function useNetwork(minutes: number) {
   const [token, setToken] = useState<string | null>(() =>
-    sessionStorage.getItem("sentinel.session.v1"),
+    readSession(),
   );
   const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<Snapshot | null>(null);
@@ -18,7 +21,7 @@ export function useNetwork(minutes: number) {
       void request("/api/auth/logout", token, { method: "POST" }).catch(
         () => {},
       );
-    sessionStorage.removeItem("sentinel.session.v1");
+    writeSession(null);
     setToken(null);
     setUser(null);
     setData(null);
@@ -32,7 +35,7 @@ export function useNetwork(minutes: number) {
       null,
       { method: "POST", body: JSON.stringify({ email, password }) },
     );
-    sessionStorage.setItem("sentinel.session.v1", result.token);
+    writeSession(result.token);
     setUser(result.user);
     setToken(result.token);
   };
@@ -61,7 +64,7 @@ export function useNetwork(minutes: number) {
         if (!active) return;
         setUser(me);
         setData(snapshot);
-        const url = new URL(`${API}/api/live`);
+        const url = new URL(`${API}/api/live`, window.location.origin);
         url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
         url.searchParams.set("ticket", ticket.ticket);
         url.searchParams.set("minutes", String(minutes));
@@ -81,7 +84,9 @@ export function useNetwork(minutes: number) {
         socket.onmessage = (event) => {
           if (!active) return;
           try {
-            setData(JSON.parse(event.data) as Snapshot);
+            const incoming:unknown=JSON.parse(event.data);
+            if(!validSnapshot(incoming))throw new Error("Invalid snapshot schema");
+            setData(previous=>!previous||incoming.timestamp>=previous.timestamp?incoming:previous);
             setConnection("live");
             setError("");
             attempts = 0;

@@ -36,7 +36,9 @@ class Database:
         if not self.pool:
             from fastapi import HTTPException
 
-            raise HTTPException(503, "Database not configured. Connect Neon to continue.")
+            raise HTTPException(
+                503, "Database not configured. Set DATABASE_URL for local PostgreSQL or Neon."
+            )
         async with self.pool.connection() as conn:
             # Transaction-local settings work through Neon's transaction pooler.
             # This schema prevents collisions with other applications' tables.
@@ -67,6 +69,13 @@ async def migrate():
     async with db.connection() as conn:
         await conn.execute("SELECT pg_advisory_xact_lock(739142010)")
         await conn.execute(Path(__file__).with_name("schema.sql").read_text())
+        for path in sorted(Path(__file__).with_name("migrations").glob("*.sql")):
+            version = int(path.name.split("_", 1)[0])
+            exists = await (
+                await conn.execute("SELECT 1 FROM schema_versions WHERE version=%s", (version,))
+            ).fetchone()
+            if not exists:
+                await conn.execute(path.read_text())
     await db.close()
 
 

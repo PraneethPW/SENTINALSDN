@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     collector_token: str = ""
     model_path: Path = Path("artifacts/model.joblib")
     model_sha256: str = ""
-    detection_threshold: float = Field(default=0.90, ge=0.5, le=1)
+    detection_threshold: float = Field(default=0.525, ge=0.5, le=1)
     minimum_attack_packets: int = Field(default=100, ge=1)
     session_hours: int = Field(default=8, ge=1, le=24)
     openrouter_api_key: str = ""

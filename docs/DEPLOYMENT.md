@@ -4,11 +4,11 @@
 
 Use a dedicated database/branch for this project. In the Neon console, select **Connect**, select the intended database and role, and copy the complete pooled PostgreSQL URL, including its actual password, `sslmode=require`, and `channel_binding=require`. A string containing asterisks cannot authenticate. Never put the URL in frontend settings or Git.
 
-Keep schema ownership separate from runtime access for a multi-user deployment. This initial container runs the additive v1 migration before starting. To enforce a least-privilege runtime role, run migrations as a separate release step and adapt `entrypoint.sh` so the runtime only starts Uvicorn. Use a direct Neon endpoint for administrative/session-level tasks if your pooler configuration does not support them; application locks here are transaction-scoped.
+Keep schema ownership separate from runtime access for a multi-user deployment. This initial container runs the versioned additive migrations before starting. To enforce a least-privilege runtime role, run migrations as a separate release step and adapt `entrypoint.sh` so the runtime only starts Uvicorn. Use a direct Neon endpoint for administrative/session-level tasks if your pooler configuration does not support them; application locks here are transaction-scoped.
 
 ## Railway backend
 
-Create the project in the chosen Praneeth_Reddy workspace. Use `backend` as the service root, Dockerfile as builder, and `/health/ready` as healthcheck. The deployed service is defined in `backend/.railway/railway.ts`; install root dependencies with `npm ci`, review `npm run infra:plan`, then apply the reviewed changes. Variables remain unmanaged by IaC so secrets never enter source. The deployed API uses US East Metal near the Neon US East database, and the generated domain targets Railway's injected port 8080. If deploying the local directory via the Railway CLI, run from `backend`. It includes the verified public-data model artifact; raw training data and all `.env` files are excluded from the Docker context.
+Create the project in the chosen Praneeth_Reddy workspace. Use `backend` as the service root, Dockerfile as builder, and `/health/ready` as healthcheck. The deployed service is defined in `backend/.railway/railway.ts`; install root dependencies with `npm ci`, review `npm run infra:plan`, then apply the reviewed changes. Variables remain unmanaged by IaC so secrets never enter source. The deployed API uses US East Metal near the Neon US East database, and the generated domain targets Railway's injected port 8080. If deploying the local directory via the Railway CLI, run from `backend`. It includes the verified public-data model with controlled benign-lab adaptation; raw training data and all `.env` files are excluded from the Docker context.
 
 Set these service variables through Railway's Variables UI, or a secure credential workflow:
 
@@ -20,7 +20,7 @@ Set these service variables through Railway's Variables UI, or a secure credenti
 | COLLECTOR_TOKEN | cryptographically random secret, ≥32 characters |
 | MODEL_PATH | artifacts/model.joblib |
 | MODEL_SHA256 | SHA-256 of the artifact actually deployed |
-| DETECTION_THRESHOLD | 0.90 |
+| DETECTION_THRESHOLD | 0.525 (must match the promoted artifact) |
 | MINIMUM_ATTACK_PACKETS | 100 |
 | MITIGATION_ENABLED | false until deployment validation |
 | RETENTION_DAYS | 7 (configurable 1–90) |

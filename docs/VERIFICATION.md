@@ -5,7 +5,7 @@ Verified path: actual isolated Mininet packets â†’ three Open vSwitch switches â
 ## Released targets
 
 - Frontend: https://sentinel-sdn.vercel.app/
-- Vercel deployment: `dpl_AagJxAwfe4DeAh5BRK7Cf2nwNezX`, READY, staged HTML verified before promotion.
+- Vercel deployment: `dpl_29B8YmsKWYMmh6k7HxRnjnxLbSMb`, READY, staged HTML verified before promotion.
 - API: https://api-production-5de58.up.railway.app/health/ready
 - Railway deployment: `7164feaf-e1b8-4386-bd12-c75399663b96`, SUCCESS, liveness version `1.2.0`.
 - Production database: Neon, TLS, dedicated `sentinel` schema.
@@ -33,7 +33,7 @@ Verified path: actual isolated Mininet packets â†’ three Open vSwitch switches â
 | Dependency audit | Frontend production dependency audit reported zero vulnerabilities at verification time; this is not a security certification |
 | Persistence | Numbered additive migration, schema isolation, transactional audit and revision events; retention and batch idempotency covered in real PostgreSQL tests |
 
-The backend test runner emits one Starlette deprecation warning about its httpx test-client adapter; all tests pass. CI configuration runs the suites on a dedicated PostgreSQL service. Current remote run status is available in the repositoryâ€™s GitHub Actions tab.
+The backend test runner emits one Starlette deprecation warning about its httpx test-client adapter; all tests pass. CI configuration runs the suites on a dedicated PostgreSQL service. The code release passed remote GitHub Actions: https://github.com/PraneethPW/SENTINALSDN/actions/runs/41285449536 (54 backend and 10 frontend checks, plus the production frontend build).
 
 ## Public entry and real identity verification
 

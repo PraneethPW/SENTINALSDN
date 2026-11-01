@@ -2,12 +2,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { API, ApiError, request } from "./api";
 import type { Snapshot, User } from "./api";
 
-import {readSession,writeSession} from "./session";
-function validSnapshot(value:unknown):value is Snapshot{if(!value||typeof value!=="object")return false;const d=value as Partial<Snapshot>;return typeof d.timestamp==='string'&&Number.isFinite(Date.parse(d.timestamp))&&Array.isArray(d.flows)&&Array.isArray(d.collectors)&&Array.isArray(d.incidents)&&Array.isArray(d.commands)&&Array.isArray(d.series)&&!!d.summary&&!!d.model&&!!d.integrations}
-export function useNetwork(minutes: number) {
-  const [token, setToken] = useState<string | null>(() =>
-    readSession(),
+import { readSession, writeSession, endSession } from "./session";
+function validSnapshot(value: unknown): value is Snapshot {
+  if (!value || typeof value !== "object") return false;
+  const d = value as Partial<Snapshot>;
+  return (
+    typeof d.timestamp === "string" &&
+    Number.isFinite(Date.parse(d.timestamp)) &&
+    Array.isArray(d.flows) &&
+    Array.isArray(d.collectors) &&
+    Array.isArray(d.incidents) &&
+    Array.isArray(d.commands) &&
+    Array.isArray(d.series) &&
+    !!d.summary &&
+    !!d.model &&
+    !!d.integrations
   );
+}
+export function useNetwork(minutes: number) {
+  const [token, setToken] = useState<string | null>(() => readSession());
   const [user, setUser] = useState<User | null>(null);
   const [data, setData] = useState<Snapshot | null>(null);
   const [connection, setConnection] = useState<
@@ -15,18 +28,20 @@ export function useNetwork(minutes: number) {
   >("signed-out");
   const [error, setError] = useState("");
   const socketRef = useRef<WebSocket | null>(null);
-  const logout = useCallback(() => {
-    if (token)
-      void request("/api/auth/logout", token, { method: "POST" }).catch(
-        () => {},
-      );
-    writeSession(null);
+  const logoutStarted = useRef(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const logout = useCallback(async () => {
+    if (logoutStarted.current) return;
+    logoutStarted.current = true;
+    setSigningOut(true);
+    await endSession(token);
     setToken(null);
     setUser(null);
     setData(null);
     setError("");
     socketRef.current?.close();
     setConnection("signed-out");
+    setSigningOut(false);
   }, [token]);
   const login = async (email: string, password: string) => {
     const result = await request<{ token: string; user: User }>(
@@ -34,6 +49,7 @@ export function useNetwork(minutes: number) {
       null,
       { method: "POST", body: JSON.stringify({ email, password }) },
     );
+    logoutStarted.current = false;
     writeSession(result.token);
     setUser(result.user);
     setToken(result.token);
@@ -48,7 +64,7 @@ export function useNetwork(minutes: number) {
     setConnection("connecting");
     setError("");
     async function connect() {
-      if (!active) return;
+      if (!active || logoutStarted.current) return;
       try {
         const [me, snapshot, ticket] = await Promise.all([
           request<User>("/api/auth/me", token, { signal: controller.signal }),
@@ -60,7 +76,7 @@ export function useNetwork(minutes: number) {
             signal: controller.signal,
           }),
         ]);
-        if (!active) return;
+        if (!active || logoutStarted.current) return;
         setUser(me);
         setData(snapshot);
         const url = new URL(`${API}/api/live`, window.location.origin);
@@ -72,7 +88,7 @@ export function useNetwork(minutes: number) {
         const markStale = () => {
           clearTimeout(staleTimer);
           staleTimer = setTimeout(() => {
-            if (active) {
+            if (active && !logoutStarted.current) {
               setConnection("reconnecting");
               setError("Stream interrupted. Reconnecting…");
               socket.close();
@@ -81,11 +97,16 @@ export function useNetwork(minutes: number) {
         };
         socket.onopen = markStale;
         socket.onmessage = (event) => {
-          if (!active) return;
+          if (!active || logoutStarted.current) return;
           try {
-            const incoming:unknown=JSON.parse(event.data);
-            if(!validSnapshot(incoming))throw new Error("Invalid snapshot schema");
-            setData(previous=>!previous||incoming.timestamp>=previous.timestamp?incoming:previous);
+            const incoming: unknown = JSON.parse(event.data);
+            if (!validSnapshot(incoming))
+              throw new Error("Invalid snapshot schema");
+            setData((previous) =>
+              !previous || incoming.timestamp >= previous.timestamp
+                ? incoming
+                : previous,
+            );
             setConnection("live");
             setError("");
             attempts = 0;
@@ -97,7 +118,7 @@ export function useNetwork(minutes: number) {
         };
         socket.onclose = (event) => {
           clearTimeout(staleTimer);
-          if (!active) return;
+          if (!active || logoutStarted.current) return;
           if (event.code === 4401) {
             logout();
             return;
@@ -106,7 +127,7 @@ export function useNetwork(minutes: number) {
         };
         socket.onerror = () => socket.close();
       } catch (reason) {
-        if (!active) return;
+        if (!active || logoutStarted.current) return;
         if (reason instanceof ApiError && reason.status === 401) {
           logout();
           return;
@@ -118,6 +139,7 @@ export function useNetwork(minutes: number) {
       }
     }
     function retry() {
+      if (logoutStarted.current) return;
       setConnection("reconnecting");
       attempts += 1;
       timer = setTimeout(
@@ -141,5 +163,15 @@ export function useNetwork(minutes: number) {
         await request<Snapshot>(`/api/snapshot?minutes=${minutes}`, token),
       );
   };
-  return { token, user, data, connection, error, login, logout, refresh };
+  return {
+    token,
+    user,
+    data,
+    connection,
+    error,
+    login,
+    logout,
+    refresh,
+    signingOut,
+  };
 }

@@ -13,7 +13,7 @@ import AuthPortal from "./AuthPortal";
 import type { AuthResult } from "./AuthPortal";
 import { request } from "./api";
 import type { User } from "./api";
-import { readSession, writeSession } from "./session";
+import { readSession, writeSession, endSession } from "./session";
 const Console = lazy(() => import("./App"));
 let handoff: { key: string; promise: Promise<AuthResult> } | null = null;
 function completeGoogle(code: string, verifier: string) {
@@ -200,13 +200,8 @@ function WorkspaceGate() {
         </button>
         <button
           className="entry-signout"
-          onClick={() => {
-            const token = readSession();
-            if (token)
-              void request("/api/auth/logout", token, { method: "POST" }).catch(
-                () => {},
-              );
-            writeSession(null);
+          onClick={async () => {
+            await endSession(readSession());
             location.replace("/auth/sign-in");
           }}
         >

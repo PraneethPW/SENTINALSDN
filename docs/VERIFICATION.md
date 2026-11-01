@@ -2,7 +2,7 @@
 
 Verified 1 November 2026. This section supersedes the shared-workspace registration behavior documented in the historical 1.2 record below.
 
-- **59 backend tests passed** against a dedicated real PostgreSQL test database; **13 frontend tests passed**, TypeScript and the production build passed, and Ruff passed.
+- **59 backend tests passed** against a dedicated real PostgreSQL test database; **15 frontend tests passed**, TypeScript and the production build passed, and Ruff passed.
 - Fresh email and verified Google registrations own separate empty workspaces. Existing approved research-lab membership stays intact. A never-approved public registration whose role was promoted without approval also migrates correctly; deliberately revoked team access remains restricted.
 - Tests cover workspace-scoped collector ingestion, duplicate collector names, foreign batch-ID conflicts, history, CSV exports, users, assignment, incidents, mitigation commands, AI reports, WebSocket snapshots and cache keys. Scoped foreign keys protect related database records. Cross-workspace lookups/mutations return no foreign records.
 - A fresh local account was registered through the actual API and then used through browser email sign-in. Its initial collectors, flows and incidents were empty. Its private setup bundle was downloaded, its included real Mininet lab was started, and measurements appeared only after actual counter windows arrived.
@@ -107,3 +107,8 @@ The onboarding modal also uses instance-specific IDs for labels and headings, in
 
 
 The final Mac terminal check found that the default Docker context was not the running Colima VM. Setup bundles now include a standard-library `connect.py` launcher that selects a working context and supports either Compose command. Each bundle's project and spool-volume names are unique to its workspace, preventing container or queued-batch reuse across accounts. The actual downloaded local bundle was launched with `/usr/bin/python3 connect.py up` without any Docker flags; it selected `colima-sentinel-sdn` and started the workspace-specific real lab. `connect.py status` confirmed the running container. The ordinary Docker context remained `default`.
+
+
+## Logout revocation correction
+
+A server-side cleanup inspection found a real browser logout race: the immediate full-page redirect could cancel the session-revocation request. Logout now awaits a bounded revocation attempt with keepalive before emitting the navigation-triggering storage event, prevents stream reconnects during sign-out, and shows an in-progress control. It still clears device access if the server is unreachable. Two additional regression tests cover ordering and network failure, bringing frontend coverage to **15 tests** (59 backend + 15 frontend). A fresh local browser sign-in/sign-out was checked against PostgreSQL and left **zero server sessions** for the verification account. Old abandoned verification sessions were explicitly revoked before that check.

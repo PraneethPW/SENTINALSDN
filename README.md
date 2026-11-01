@@ -220,7 +220,7 @@ For the Docker local stack, put optional `LOCAL_GOOGLE_CLIENT_ID` and `LOCAL_GOO
 
 ## Release verification
 
-Sentinel 1.3: **59 backend + 13 frontend tests passed**; local PostgreSQL recovery, live browser workflows, mobile layout, concurrent connections and both cloud deployments verified. See the detailed record for scope and model limits.
+Sentinel 1.3: **59 backend + 15 frontend tests passed**; local PostgreSQL recovery, live browser workflows, mobile layout, concurrent connections and both cloud deployments verified. See the detailed record for scope and model limits.
 
 ## Deployment and verification
 

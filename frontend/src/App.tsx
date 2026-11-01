@@ -222,7 +222,7 @@ export default function App() {
   );
   const [minutes, setMinutes] = useState(15);
   const network = useNetwork(minutes);
-  const { data, user, token, connection, error } = network;
+  const { data, user, token, connection, error, signingOut } = network;
   const systemReduced = useReducedMotion();
   const [motionOff, setMotionOff] = useState(() => {
     try {
@@ -703,12 +703,18 @@ export default function App() {
             {user ? (
               <button
                 className="profile-button"
+                disabled={signingOut}
+                aria-busy={signingOut}
                 onClick={() => network.logout()}
                 title={`Sign out ${user.email}`}
                 aria-label={`Sign out ${user.email}`}
               >
                 <span>{user.email.slice(0, 2).toUpperCase()}</span>
-                <LogOut size={14} />
+                {signingOut ? (
+                  <LoaderCircle size={14} className="spin" />
+                ) : (
+                  <LogOut size={14} />
+                )}
               </button>
             ) : (
               <button
@@ -1772,11 +1778,16 @@ export default function App() {
                         </p>
                         <button
                           className="button primary"
+                          disabled={signingOut}
                           onClick={() =>
                             user ? network.logout() : setLoginOpen(true)
                           }
                         >
-                          {user ? "Sign out" : "Sign in"}
+                          {signingOut
+                            ? "Signing out…"
+                            : user
+                              ? "Sign out"
+                              : "Sign in"}
                           <ArrowRight size={15} />
                         </button>
                       </div>

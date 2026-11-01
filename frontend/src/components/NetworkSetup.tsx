@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
 import {
   Check,
@@ -26,6 +26,8 @@ export default function NetworkSetup({
   refresh: () => Promise<void>;
 }) {
   const workspace = data.workspace;
+  const nameId = useId(),
+    titleId = useId();
   const [name, setName] = useState(workspace?.name ?? ""),
     [busy, setBusy] = useState(""),
     [message, setMessage] = useState(""),
@@ -107,17 +109,14 @@ export default function NetworkSetup({
     });
   }
   return (
-    <section
-      className="network-setup panel"
-      aria-labelledby="network-setup-title"
-    >
+    <section className="network-setup panel" aria-labelledby={titleId}>
       <div className="setup-welcome">
         <span className="setup-emblem">
           <Network size={28} strokeWidth={1.2} />
         </span>
         <div>
           <span className="eyebrow">YOUR WORKSPACE / YOUR NETWORK</span>
-          <h2 id="network-setup-title">
+          <h2 id={titleId}>
             {data.collectors.length
               ? "Your network connection."
               : "Your workspace is ready."}
@@ -139,11 +138,11 @@ export default function NetworkSetup({
       ) : null}
       {user.role === "admin" ? (
         <form className="setup-name" onSubmit={rename}>
-          <label htmlFor="workspace-name">
+          <label htmlFor={nameId}>
             Workspace name
             <input
               className="form-input"
-              id="workspace-name"
+              id={nameId}
               value={name}
               onChange={(e) => setName(e.target.value)}
               minLength={2}

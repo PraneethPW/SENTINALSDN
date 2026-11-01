@@ -1,3 +1,4 @@
+import ManagedLabPanel from "./ManagedLabPanel";
 import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
 import {
@@ -14,7 +15,7 @@ import {
 import { API, request, time } from "../api";
 import type { Snapshot, User } from "../api";
 
-export default function NetworkSetup({
+export function ManualNetworkSetup({
   token,
   user,
   data,
@@ -340,5 +341,21 @@ export default function NetworkSetup({
         accuracy of your network. No enforcement is enabled.
       </p>
     </section>
+  );
+}
+
+export default function NetworkSetup(
+  props: Parameters<typeof ManualNetworkSetup>[0],
+) {
+  return (
+    <div className="network-onboarding">
+      <ManagedLabPanel {...props} />
+      <details className="advanced-network panel">
+        <summary>
+          Connect an existing SDN network <span>Advanced setup</span>
+        </summary>
+        <ManualNetworkSetup {...props} />
+      </details>
+    </div>
   );
 }

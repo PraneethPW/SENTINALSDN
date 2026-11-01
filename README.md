@@ -4,6 +4,10 @@
 
 A React defense console backed by measured OpenFlow telemetry, PostgreSQL persistence, a validated Extra Trees classifier, operator-controlled mitigation, and optional OpenRouter analysis. There is no seeded dashboard traffic, random alert generator, or invented model accuracy. The animated Three.js hero is explicitly decorative.
 
+## Start a live lab
+
+Create an account, open **Network setup**, and click **Start my live lab**. The system starts a private real Mininet network, controller, and collector. No terminal or download is required for the user. Startup takes about 60–90 seconds; progress follows actual controller and flow events. Stop or restart the lab from the same panel. The current Mac host provides two concurrent managed slots and must remain awake. Sessions expire after 60 minutes or 15 minutes with no visible console. See [managed lab operation and limits](docs/MANAGED_LABS.md).
+
 ## Stack
 
 | Layer | Implementation |
@@ -72,7 +76,7 @@ The current live feed comes from the real Mininet/OVS lab on the development Mac
 
 ## Run locally
 
-Requirements: Node 22+, Docker and Docker Compose. On macOS install the reputable packages with `brew install colima docker docker-compose`. The launcher starts a separate Colima profile named `sentinel-sdn` (4 CPUs, 6 GiB RAM) without changing your existing Docker context. Linux uses the default Docker context; set `SENTINEL_DOCKER_CONTEXT` to override.
+Requirements: Node 22+, Python 3.9+, Docker and Docker Compose. On macOS install the reputable packages with `brew install colima docker docker-compose`. The launcher starts a separate Colima profile named `sentinel-sdn` (4 CPUs, 6 GiB RAM) without changing your existing Docker context. Linux uses the default Docker context; set `SENTINEL_DOCKER_CONTEXT` to override.
 
 ```bash
 cd "/Users/praneethreddy/Freelance Projects /Sentinel-SDN"
@@ -220,7 +224,7 @@ For the Docker local stack, put optional `LOCAL_GOOGLE_CLIENT_ID` and `LOCAL_GOO
 
 ## Release verification
 
-Sentinel 1.3: **59 backend + 15 frontend tests passed**; local PostgreSQL recovery, live browser workflows, mobile layout, concurrent connections and both cloud deployments verified. See the detailed record for scope and model limits.
+Sentinel 1.4: **73 backend + 19 frontend tests passed**; local PostgreSQL recovery, live browser workflows, mobile layout, concurrent connections and both cloud deployments verified. See the detailed record for scope and model limits.
 
 ## Deployment and verification
 

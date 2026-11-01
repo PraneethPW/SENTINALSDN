@@ -59,14 +59,30 @@ async def collector_auth(credentials: HTTPAuthorizationCredentials | None = Depe
         raise HTTPException(401, "Invalid collector token")
     configured = settings().collector_token
     if configured and secrets.compare_digest(digest(credentials.credentials), digest(configured)):
-        return "00000000-0000-0000-0000-000000000001"
+        return {
+            "workspace_id": "00000000-0000-0000-0000-000000000001",
+            "lab_run_id": None,
+            "collector_id": None,
+        }
     row = await db.one(
-        "UPDATE collector_credentials SET last_used_at=now() WHERE token_hash=%s AND revoked_at IS NULL RETURNING workspace_id",
+        """UPDATE collector_credentials c SET last_used_at=now() WHERE token_hash=%s AND revoked_at IS NULL
+        AND (expires_at IS NULL OR expires_at>now()) AND (lab_run_id IS NULL OR EXISTS
+        (SELECT 1 FROM managed_labs l WHERE l.id=c.lab_run_id AND l.desired_state='running'
+         AND l.expires_at>now() AND l.idle_expires_at>now())) RETURNING workspace_id,lab_run_id""",
         (digest(credentials.credentials),),
     )
     if not row:
         raise HTTPException(401, "Invalid or revoked collector token")
-    return str(row["workspace_id"])
+    return {
+        "workspace_id": str(row["workspace_id"]),
+        "lab_run_id": row["lab_run_id"],
+        "collector_id": "lab-" + row["lab_run_id"].hex if row["lab_run_id"] else None,
+    }
+
+
+def check_collector(scope, collector_id):
+    if scope["collector_id"] and scope["collector_id"] != collector_id:
+        raise HTTPException(403, "This credential belongs to another lab collector")
 
 
 def public_user(user):

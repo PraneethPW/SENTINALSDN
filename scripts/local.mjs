@@ -3,6 +3,7 @@ import { randomBytes,createHash } from 'node:crypto';
 import { existsSync,readFileSync,writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import {configureLocal,startHost,drainLocal} from './lab-host.mjs';
 const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const file=path.join(root,'.env.local-stack');
 const context=process.env.SENTINEL_DOCKER_CONTEXT || (process.platform==='darwin'?'colima-sentinel-sdn':'default');
@@ -19,6 +20,7 @@ if(!existsSync(file)) {
  writeFileSync(file,`LOCAL_DB_PASSWORD=${secret()}\nLOCAL_COLLECTOR_TOKEN=${secret()}\nLOCAL_ADMIN_EMAIL=admin@sentinel.local\nLOCAL_ADMIN_PASSWORD=${secret()}\n`,{mode:0o600});
 }
 let text=readFileSync(file,'utf8').replace(/^LOCAL_MODEL_(SHA256|THRESHOLD)=.*\n?/gm,'');
+if(!/^LOCAL_LAB_HOST_TOKEN=.+$/m.test(text))text+=`LOCAL_LAB_HOST_TOKEN=${randomBytes(32).toString('hex')}\n`;
 text+=`LOCAL_MODEL_SHA256=${createHash('sha256').update(readFileSync(path.join(root,'backend/artifacts/model.joblib'))).digest('hex')}\nLOCAL_MODEL_THRESHOLD=${JSON.parse(readFileSync(path.join(root,'backend/artifacts/model.json'))).evaluation_threshold}\n`;
 writeFileSync(file,text,{mode:0o600});
 if(action==='credentials') {console.log(text.split('\n').filter(l=>l.startsWith('LOCAL_ADMIN_')).join('\n'));process.exit(0);}
@@ -27,5 +29,7 @@ const executable=plugin?'docker':'docker-compose';
 const base=plugin?['--context',context,'compose','--env-file',file,'-f','compose.local.yml']:['--context',context,'--env-file',file,'-f','compose.local.yml'];
 if(action==='up'){
  run(executable,[...base,'up','--build','--wait','--wait-timeout','240','-d']);
+ configureLocal(text.match(/^LOCAL_LAB_HOST_TOKEN=(.+)$/m)[1],context);
+ startHost();
  console.log('\nSentinel local: http://localhost:5180\nAPI: http://localhost:8100\nCredentials: npm run local:credentials\nDatabase, inference, and real SDN packets run locally. Google sign-in uses optional provider credentials.\nAllow 60 seconds for discovery and the first valid ML window.');
-}else run(executable,[...base,...({down:['down'],status:['ps'],logs:['logs','--tail','100','-f']}[action])]);
+}else {if(action==='down')await drainLocal();run(executable,[...base,...({down:['down'],status:['ps'],logs:['logs','--tail','100','-f']}[action])]);}

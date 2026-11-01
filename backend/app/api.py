@@ -13,6 +13,7 @@ from psycopg.types.json import Jsonb
 from app.config import settings
 from app.db import db
 from app.detector import detector
+from app.managed_labs import lab_view
 from app.schemas import ExplainRequest, IncidentUpdate, Login
 from app.security import DUMMY_HASH, current_user, identity_user, digest, operator, public_user, verify
 
@@ -101,7 +102,9 @@ async def snapshot(minutes: int = 15, *, workspace_id):
             )
         )[0]["n"]
         collectors = await fetch(
-            "SELECT *,last_seen>now()-interval '75 seconds' AS online FROM collectors WHERE workspace_id=%s ORDER BY id",
+            """SELECT c.*,c.last_seen>now()-interval '75 seconds' AND (c.lab_run_id IS NULL OR
+            (l.desired_state='running' AND l.expires_at>now() AND l.idle_expires_at>now())) AS online
+            FROM collectors c LEFT JOIN managed_labs l ON l.id=c.lab_run_id WHERE c.workspace_id=%s ORDER BY c.id""",
             (workspace_id,),
         )
         series = await fetch(
@@ -140,10 +143,11 @@ async def snapshot(minutes: int = 15, *, workspace_id):
             await fetch("SELECT id,name,kind,created_at FROM workspaces WHERE id=%s", (workspace_id,))
         )[0]
         key = await fetch(
-            "SELECT id,prefix,created_at,last_used_at FROM collector_credentials WHERE workspace_id=%s AND revoked_at IS NULL",
+            "SELECT id,prefix,created_at,last_used_at FROM collector_credentials WHERE workspace_id=%s AND purpose='manual' AND revoked_at IS NULL",
             (workspace_id,),
         )
         workspace["collector_key"] = key[0] if key else None
+        workspace["lab"] = await lab_view(conn, workspace_id)
         workspace["has_measurements"] = bool(
             (await fetch("SELECT 1 FROM flows WHERE workspace_id=%s LIMIT 1", (workspace_id,)))
         )

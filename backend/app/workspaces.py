@@ -35,7 +35,7 @@ class WorkspaceName(BaseModel):
 async def workspace(user=Depends(current_user)):
     row = await db.one("SELECT id,name,kind,created_at FROM workspaces WHERE id=%s", (user["workspace_id"],))
     row["collector_key"] = await db.one(
-        "SELECT id,prefix,created_at,last_used_at FROM collector_credentials WHERE workspace_id=%s AND revoked_at IS NULL",
+        "SELECT id,prefix,created_at,last_used_at FROM collector_credentials WHERE workspace_id=%s AND purpose='manual' AND revoked_at IS NULL",
         (user["workspace_id"],),
     )
     return row
@@ -171,7 +171,7 @@ async def download_setup(request: Request, user=Depends(administrator)):
         await conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (str(user["workspace_id"]),))
         active = await (
             await conn.execute(
-                "SELECT id FROM collector_credentials WHERE workspace_id=%s AND revoked_at IS NULL",
+                "SELECT id FROM collector_credentials WHERE workspace_id=%s AND purpose='manual' AND revoked_at IS NULL",
                 (user["workspace_id"],),
             )
         ).fetchone()
@@ -202,7 +202,7 @@ async def revoke_key(user=Depends(administrator)):
         await conn.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (str(user["workspace_id"]),))
         row = await (
             await conn.execute(
-                "UPDATE collector_credentials SET revoked_at=now() WHERE workspace_id=%s AND revoked_at IS NULL RETURNING id",
+                "UPDATE collector_credentials SET revoked_at=now() WHERE workspace_id=%s AND purpose='manual' AND revoked_at IS NULL RETURNING id",
                 (user["workspace_id"],),
             )
         ).fetchone()

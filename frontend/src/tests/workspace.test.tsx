@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import NetworkSetup from "../components/NetworkSetup";
+import { ManualNetworkSetup as NetworkSetup } from "../components/NetworkSetup";
 import type { Snapshot, User } from "../api";
 
 const data = {

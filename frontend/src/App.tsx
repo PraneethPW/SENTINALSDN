@@ -629,7 +629,7 @@ export default function App() {
             <a href="/" className="workspace-home-link">
               ← Sentinel home
             </a>
-            <span className="version">SENTINEL / 1.3</span>
+            <span className="version">SENTINEL / 1.4</span>
             <span className="footer-dot" />{" "}
             <span>OBSERVE. UNDERSTAND. DEFEND.</span>
           </div>
@@ -856,7 +856,11 @@ export default function App() {
               ) : null}
               {section === "overview" ? (
                 <>
-                  {token && user && data && !data.collectors.length ? (
+                  {token &&
+                  user &&
+                  data &&
+                  (data.workspace?.kind === "private" ||
+                    !data.collectors.length) ? (
                     <NetworkSetup
                       token={token}
                       user={user}

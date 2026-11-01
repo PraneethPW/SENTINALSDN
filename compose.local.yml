@@ -21,6 +21,7 @@ services:
       ENVIRONMENT: development
       DATABASE_URL: postgresql://sentinel:${LOCAL_DB_PASSWORD}@postgres:5432/sentinel_local
       COLLECTOR_TOKEN: ${LOCAL_COLLECTOR_TOKEN}
+      LAB_HOST_TOKEN: ${LOCAL_LAB_HOST_TOKEN:?Run npm run local:up}
       MODEL_SHA256: ${LOCAL_MODEL_SHA256}
       DETECTION_THRESHOLD: ${LOCAL_MODEL_THRESHOLD:-0.525}
       CORS_ORIGINS: http://localhost:5180,http://127.0.0.1:5180,http://localhost:5173,http://127.0.0.1:5173

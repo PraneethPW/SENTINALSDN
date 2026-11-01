@@ -157,6 +157,31 @@ export function useNetwork(minutes: number) {
       socketRef.current?.close();
     };
   }, [token, minutes, logout]);
+  const labId =
+    data?.workspace?.lab?.run?.desired_state === "running"
+      ? data.workspace.lab.run.id
+      : null;
+  useEffect(() => {
+    if (!token || !labId) return;
+    const controller = new AbortController();
+    const keepAlive = () => {
+      if (document.visibilityState !== "visible" || logoutStarted.current)
+        return;
+      void request("/api/workspace/lab/presence", token, {
+        method: "POST",
+        body: JSON.stringify({ lab_id: labId }),
+        signal: controller.signal,
+      }).catch(() => {});
+    };
+    keepAlive();
+    const interval = setInterval(keepAlive, 60000);
+    document.addEventListener("visibilitychange", keepAlive);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", keepAlive);
+    };
+  }, [token, labId]);
   const refresh = async () => {
     if (token)
       setData(

@@ -26,6 +26,7 @@ def client(monkeypatch):
     if "_test" not in TEST_URL.split("?")[0].rsplit("/", 1)[-1]:
         raise RuntimeError("Integration DB name must include _test; refusing destructive fixture cleanup")
     monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("LAB_HOST_TOKEN", "")
     monkeypatch.setenv("OPENROUTER_API_KEY", "")
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "")
@@ -45,7 +46,7 @@ def client(monkeypatch):
             ).fetchone():
                 conn.execute(migration.read_text())
         conn.execute(
-            "TRUNCATE oauth_states,oauth_handoffs,oauth_link_tickets,ai_reports,audit_log,commands,incidents,flows,batches,collectors,ws_tickets,sessions,login_attempts,users RESTART IDENTITY CASCADE"
+            "TRUNCATE lab_hosts,oauth_states,oauth_handoffs,oauth_link_tickets,ai_reports,audit_log,commands,incidents,flows,batches,collectors,ws_tickets,sessions,login_attempts,users RESTART IDENTITY CASCADE"
         )
         for role in ("admin", "viewer"):
             conn.execute(

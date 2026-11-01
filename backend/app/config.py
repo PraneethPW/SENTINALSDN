@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = ""
+    lab_host_token: str = ""
+    lab_host_id: str = "mac-research-host"
+    lab_capacity: int = Field(default=2, ge=1, le=8)
+    lab_session_minutes: int = Field(default=60, ge=5, le=120)
+    lab_idle_minutes: int = Field(default=15, ge=2, le=30)
+    lab_start_timeout_seconds: int = Field(default=180, ge=60, le=600)
 
     @property
     def origins(self) -> list[str]:
@@ -33,6 +39,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def production_requirements(self):
+        if self.lab_host_token and len(self.lab_host_token) < 32:
+            raise ValueError("LAB_HOST_TOKEN must contain at least 32 characters")
         if self.collector_token and len(self.collector_token) < 32:
             raise ValueError("COLLECTOR_TOKEN must contain at least 32 characters")
         if self.environment == "production":

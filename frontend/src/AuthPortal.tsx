@@ -167,7 +167,7 @@ export default function AuthPortal({
           </h1>
           <p className="auth-intro">
             {register
-              ? "Create your private workspace, then connect your network. No approval wait."
+              ? "Create your private workspace, then start your live lab in one click."
               : "Sign in to your Sentinel account and continue where you left off."}
           </p>
           <button
@@ -315,7 +315,7 @@ export default function AuthPortal({
           <p className="auth-privacy">
             <LockKeyhole size={12} />
             {register
-              ? "Your workspace starts empty. Connect your own network to see measurements."
+              ? "Your workspace starts empty. Start your live lab to see real measurements."
               : "Your session is private to this browser tab."}{" "}
             <a href="/privacy">Privacy details</a>
           </p>

@@ -8,18 +8,20 @@ from app.config import settings
 from app.db import db
 from app.detector import detector, features
 from app.schemas import Batch, CommandResult
-from app.security import collector_auth
+from app.security import collector_auth, check_collector
 
 router = APIRouter(prefix="/api/collector")
 
 
 @router.post("/batches")
-async def ingest(batch: Batch, workspace_id=Depends(collector_auth)):
+async def ingest(batch: Batch, scope=Depends(collector_auth)):
+    workspace_id = scope["workspace_id"]
+    check_collector(scope, batch.collector_id)
     if any(flow.switch_id not in batch.switches for flow in batch.flows):
         raise HTTPException(422, "All flows must belong to a reported switch")
     predictions = await asyncio.to_thread(detector.predict, batch.flows)
     version = detector.metadata["version"] if detector.metadata else None
-    source_type = batch.source_type
+    source_type = "isolated_lab" if scope["lab_run_id"] else batch.source_type
     if (
         "source_type" not in batch.model_fields_set
         and str(workspace_id) == "00000000-0000-0000-0000-000000000001"
@@ -27,11 +29,21 @@ async def ingest(batch: Batch, workspace_id=Depends(collector_auth)):
     ):
         source_type = "isolated_lab"
     async with db.connection() as conn:
+        if scope["lab_run_id"]:
+            active = await (
+                await conn.execute(
+                    """SELECT id FROM managed_labs WHERE id=%s AND workspace_id=%s
+                AND desired_state='running' AND expires_at>now() AND idle_expires_at>now() FOR UPDATE""",
+                    (scope["lab_run_id"], workspace_id),
+                )
+            ).fetchone()
+            if not active:
+                raise HTTPException(401, "Lab session ended")
         await conn.execute(
-            """INSERT INTO collectors(id,last_seen,switches,controller_status,version,topology,workspace_id,source_type)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(workspace_id,id) DO UPDATE SET last_seen=EXCLUDED.last_seen,
+            """INSERT INTO collectors(id,last_seen,switches,controller_status,version,topology,workspace_id,source_type,lab_run_id)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(workspace_id,id) DO UPDATE SET last_seen=EXCLUDED.last_seen,
             switches=EXCLUDED.switches,controller_status=EXCLUDED.controller_status,version=EXCLUDED.version,topology=EXCLUDED.topology,source_type=EXCLUDED.source_type
-            WHERE EXCLUDED.last_seen>=collectors.last_seen""",
+            WHERE EXCLUDED.last_seen>=collectors.last_seen AND collectors.lab_run_id IS NOT DISTINCT FROM EXCLUDED.lab_run_id""",
             (
                 batch.collector_id,
                 batch.captured_at,
@@ -41,8 +53,17 @@ async def ingest(batch: Batch, workspace_id=Depends(collector_auth)):
                 Jsonb(batch.topology.model_dump(mode="json")),
                 workspace_id,
                 source_type,
+                scope["lab_run_id"],
             ),
         )
+        owner = await (
+            await conn.execute(
+                "SELECT lab_run_id FROM collectors WHERE workspace_id=%s AND id=%s",
+                (workspace_id, batch.collector_id),
+            )
+        ).fetchone()
+        if owner["lab_run_id"] != scope["lab_run_id"]:
+            raise HTTPException(409, "Collector identifier belongs to a managed lab")
         inserted = await conn.execute(
             "INSERT INTO batches(id,collector_id,workspace_id) VALUES (%s,%s,%s) ON CONFLICT DO NOTHING RETURNING id",
             (batch.batch_id, batch.collector_id, workspace_id),
@@ -150,11 +171,33 @@ async def ingest(batch: Batch, workspace_id=Depends(collector_auth)):
                     {"model_version": version},
                     workspace_id=workspace_id,
                 )
+        if scope["lab_run_id"]:
+            phase = (
+                "running"
+                if batch.flows
+                else ("awaiting_flows" if batch.controller_status == "connected" else "awaiting_controller")
+            )
+            await conn.execute(
+                """UPDATE managed_labs SET state=CASE WHEN first_flow_at IS NOT NULL AND %s='awaiting_flows'
+                THEN 'running' ELSE %s END,started_at=COALESCE(started_at,now()),
+                controller_seen_at=CASE WHEN %s THEN COALESCE(controller_seen_at,%s) ELSE controller_seen_at END,
+                first_flow_at=COALESCE(first_flow_at,%s),message='',updated_at=now() WHERE id=%s""",
+                (
+                    phase,
+                    phase,
+                    batch.controller_status == "connected",
+                    batch.captured_at,
+                    min((f.observed_at for f in batch.flows), default=None),
+                    scope["lab_run_id"],
+                ),
+            )
     return {"accepted": len(batch.flows), "duplicate": False}
 
 
 @router.get("/{collector_id}/commands")
-async def commands(collector_id: str, workspace_id=Depends(collector_auth)):
+async def commands(collector_id: str, scope=Depends(collector_auth)):
+    workspace_id = scope["workspace_id"]
+    check_collector(scope, collector_id)
     async with db.connection() as conn:
         await conn.execute(
             "UPDATE commands SET status='expired' WHERE workspace_id=%s AND status='enforced' AND expires_at<=now()",
@@ -174,8 +217,10 @@ async def commands(collector_id: str, workspace_id=Depends(collector_auth)):
 
 @router.post("/{collector_id}/commands/{command_id}/result")
 async def command_result(
-    collector_id: str, command_id: str, result: CommandResult, workspace_id=Depends(collector_auth)
+    collector_id: str, command_id: str, result: CommandResult, scope=Depends(collector_auth)
 ):
+    workspace_id = scope["workspace_id"]
+    check_collector(scope, collector_id)
     async with db.connection() as conn:
         cursor = await conn.execute(
             "SELECT * FROM commands WHERE id=%s AND collector_id=%s AND workspace_id=%s FOR UPDATE",

@@ -376,8 +376,8 @@ export default function Landing() {
                 Your circle.
               </h3>
               <p>
-                A private workspace at registration, your own collector, and clear viewer,
-                operator, and administrator roles.
+                A private workspace at registration, a one-click real network
+                lab, and clear viewer, operator, and administrator roles.
               </p>
             </Tilt>
             <Tilt className="lp-feature lp-investigate-card">
@@ -563,7 +563,7 @@ export default function Landing() {
             {[
               {
                 q: "What happens after I register?",
-                a: "You immediately own a private, empty workspace. Download its collector setup to connect your SDN controller or start an isolated real Mininet lab. Other users’ traffic and incidents never appear in your workspace.",
+                a: "You immediately own a private workspace. Click Start my live lab to launch your isolated Mininet network, controller, and collector automatically. Real measurements appear after the first counter window. The research host must be online and a slot available. You can also connect your existing SDN through advanced setup.",
               },
               {
                 q: "Can I run everything locally?",

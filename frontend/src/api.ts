@@ -52,6 +52,7 @@ export type Command = {
   detail: string | null;
 };
 export type Collector = {
+  lab_run_id?: string | null;
   source_type?: "sdn_controller" | "isolated_lab";
   id: string;
   last_seen: string;
@@ -107,6 +108,43 @@ export type Model = {
     limitations: string;
   };
 };
+export type ManagedLab = {
+  run: null | {
+    id: string;
+    collector_id: string;
+    desired_state: "running" | "stopped";
+    state:
+      | "queued"
+      | "starting"
+      | "awaiting_controller"
+      | "awaiting_flows"
+      | "running"
+      | "stopping"
+      | "stopped"
+      | "failed"
+      | "expired";
+    revision: number;
+    message: string;
+    created_at: string;
+    expires_at: string;
+    idle_expires_at: string;
+    started_at: string | null;
+    controller_seen_at: string | null;
+    first_flow_at: string | null;
+    stopped_at: string | null;
+    cleanup_pending: boolean;
+  };
+  host: {
+    enabled: boolean;
+    online: boolean;
+    ready: boolean;
+    capacity: number;
+    available_slots: number;
+    can_start: boolean;
+    reason: string;
+  };
+  limits: { session_minutes: number; idle_minutes: number };
+};
 export type Snapshot = {
   workspace?: {
     id: string;
@@ -114,6 +152,7 @@ export type Snapshot = {
     kind: "private" | "research_lab";
     created_at: string;
     has_measurements: boolean;
+    lab?: ManagedLab;
     collector_key: null | {
       id: string;
       prefix: string;

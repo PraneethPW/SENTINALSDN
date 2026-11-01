@@ -27,6 +27,9 @@ async def run_cleanup():
         await conn.execute(
             "UPDATE ai_reports SET status='failed' WHERE status='pending' AND created_at<now()-interval '2 minutes'"
         )
+        await conn.execute("DELETE FROM oauth_states WHERE expires_at<now()")
+        await conn.execute("DELETE FROM oauth_link_tickets WHERE expires_at<now()")
+        await conn.execute("DELETE FROM oauth_handoffs WHERE expires_at<now()")
         await conn.execute("DELETE FROM ws_tickets WHERE expires_at<now()")
         await conn.execute("DELETE FROM sessions WHERE expires_at<now()")
         await conn.execute("DELETE FROM login_attempts WHERE attempted_at<now()-interval '1 day'")

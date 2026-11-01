@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     mitigation_enabled: bool = False
     retention_days: int = Field(default=7, ge=1, le=90)
     log_level: str = "INFO"
+    registration_enabled: bool = True
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = ""
 
     @property
     def origins(self) -> list[str]:

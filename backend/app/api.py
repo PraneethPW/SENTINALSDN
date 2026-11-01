@@ -14,7 +14,7 @@ from app.config import settings
 from app.db import db
 from app.detector import detector
 from app.schemas import ExplainRequest, IncidentUpdate, Login
-from app.security import DUMMY_HASH, current_user, digest, operator, public_user, verify
+from app.security import DUMMY_HASH, current_user, identity_user, digest, operator, public_user, verify
 
 router = APIRouter(prefix="/api")
 
@@ -34,8 +34,10 @@ async def login(body: Login):
         await conn.execute("INSERT INTO login_attempts(identity) VALUES (%s)", (identity,))
         result = await conn.execute("SELECT * FROM users WHERE email=%s", (body.email.strip().lower(),))
         user = await result.fetchone()
-        valid = await asyncio.to_thread(verify, body.password, user["password_hash"] if user else DUMMY_HASH)
-        if valid and user and user["active"]:
+        valid = await asyncio.to_thread(
+            verify, body.password, user["password_hash"] if user and user["password_enabled"] else DUMMY_HASH
+        )
+        if valid and user and user["active"] and user["password_enabled"]:
             token = secrets.token_urlsafe(48)
             expiry = datetime.now(timezone.utc) + timedelta(hours=settings().session_hours)
             await conn.execute(
@@ -52,12 +54,12 @@ async def login(body: Login):
 
 
 @router.get("/auth/me")
-async def me(user=Depends(current_user)):
+async def me(user=Depends(identity_user)):
     return public_user(user)
 
 
 @router.post("/auth/logout")
-async def logout(user=Depends(current_user)):
+async def logout(user=Depends(identity_user)):
     await db.fetch("DELETE FROM sessions WHERE token_hash=%s", (user["token_hash"],))
     return {"ok": True}
 
@@ -154,7 +156,7 @@ async def update_incident(incident_id: UUID, body: IncidentUpdate, user=Depends(
         if body.assignee_id:
             target = await (
                 await conn.execute(
-                    "SELECT 1 FROM users WHERE id=%s AND active AND role IN ('admin','operator')",
+                    "SELECT 1 FROM users WHERE id=%s AND active AND approved AND role IN ('admin','operator')",
                     (body.assignee_id,),
                 )
             ).fetchone()

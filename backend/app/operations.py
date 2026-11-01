@@ -35,6 +35,7 @@ class NewUser(BaseModel):
 class ChangeUser(BaseModel):
     role: Literal["admin", "operator", "viewer"]
     active: bool
+    approved: bool | None = None
 
 
 class PasswordChange(BaseModel):
@@ -45,7 +46,9 @@ class PasswordChange(BaseModel):
 @router.get("/users")
 async def list_users(user=Depends(current_user)):
     # Operators need names for assignment; no password/session fields are exposed.
-    return await db.fetch("SELECT id,email,role,active,created_at FROM users ORDER BY created_at,id")
+    return await db.fetch(
+        "SELECT id,email,role,active,approved,display_name,password_enabled,created_at FROM users ORDER BY created_at,id"
+    )
 
 
 @router.post("/users", status_code=201)
@@ -73,16 +76,26 @@ async def change_user(user_id: UUID, body: ChangeUser, user=Depends(administrato
         ).fetchone()
         if not target:
             raise HTTPException(404, "Account not found")
-        if target["active"] and target["role"] == "admin" and (not body.active or body.role != "admin"):
+        approved = target["approved"] if body.approved is None else body.approved
+        if (
+            target["active"]
+            and target["approved"]
+            and target["role"] == "admin"
+            and (not body.active or not approved or body.role != "admin")
+        ):
             count = await (
-                await conn.execute("SELECT count(*) AS n FROM users WHERE role='admin' AND active")
+                await conn.execute(
+                    "SELECT count(*) AS n FROM users WHERE role='admin' AND active AND approved"
+                )
             ).fetchone()
             if count["n"] <= 1:
                 raise HTTPException(409, "The workspace must retain an active administrator")
         await conn.execute(
-            "UPDATE users SET role=%s,active=%s WHERE id=%s", (body.role, body.active, user_id)
+            "UPDATE users SET role=%s,active=%s,approved=%s WHERE id=%s",
+            (body.role, body.active, approved, user_id),
         )
-        await conn.execute("DELETE FROM sessions WHERE user_id=%s", (user_id,))
+        if target["role"] != body.role or target["active"] != body.active or not approved:
+            await conn.execute("DELETE FROM sessions WHERE user_id=%s", (user_id,))
         await db.audit(conn, user["id"], "user.updated", user_id, body.model_dump())
     return {"id": user_id, **body.model_dump()}
 

@@ -580,7 +580,7 @@ export default function App() {
             <ArrowUpRight size={14} />
           </button>
           <div className="sidebar-footer">
-            <span className="version">SENTINEL / 1.1</span>
+            <a href="/" className="workspace-home-link">← Sentinel home</a><span className="version">SENTINEL / 1.2</span>
             <span className="footer-dot" />{" "}
             <span>OBSERVE. UNDERSTAND. DEFEND.</span>
           </div>
@@ -1821,7 +1821,7 @@ export default function App() {
             </p>
             {selected && selected.revision !== selectedLatest.revision ? <p className="operation-message" role="status">This incident changed in another session. Close and reopen it to review the latest notes before saving.</p> : null}
             <label className="form-label" htmlFor="assignee">Assigned investigator</label>
-            <select id="assignee" className="form-input" disabled={!canOperate} value={assignee} onChange={e=>setAssignee(e.target.value)}><option value="">Unassigned</option>{assignable.filter(u=>u.active&&u.role!=="viewer").map(u=><option key={u.id} value={u.id}>{u.email}</option>)}</select>
+            <select id="assignee" className="form-input" disabled={!canOperate} value={assignee} onChange={e=>setAssignee(e.target.value)}><option value="">Unassigned</option>{assignable.filter(u=>u.active&&u.approved!==false&&u.role!=="viewer").map(u=><option key={u.id} value={u.id}>{u.email}</option>)}</select>
             <label className="form-label" htmlFor="notes">
               Investigation notes
             </label>

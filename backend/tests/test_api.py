@@ -27,6 +27,10 @@ def client(monkeypatch):
         raise RuntimeError("Integration DB name must include _test; refusing destructive fixture cleanup")
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.setenv("OPENROUTER_API_KEY", "")
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "")
+    monkeypatch.setenv("GOOGLE_REDIRECT_URI", "")
+    monkeypatch.setenv("REGISTRATION_ENABLED", "true")
     monkeypatch.setenv("DATABASE_URL", TEST_URL)
     monkeypatch.setenv("COLLECTOR_TOKEN", TOKEN)
     monkeypatch.setenv("MITIGATION_ENABLED", "true")
@@ -37,7 +41,7 @@ def client(monkeypatch):
         for migration in sorted(Path("app/migrations").glob("*.sql")):
             conn.execute(migration.read_text())
         conn.execute(
-            "TRUNCATE ai_reports,audit_log,commands,incidents,flows,batches,collectors,ws_tickets,sessions,login_attempts,users RESTART IDENTITY CASCADE"
+            "TRUNCATE oauth_states,oauth_handoffs,oauth_link_tickets,ai_reports,audit_log,commands,incidents,flows,batches,collectors,ws_tickets,sessions,login_attempts,users RESTART IDENTITY CASCADE"
         )
         for role in ("admin", "viewer"):
             conn.execute(

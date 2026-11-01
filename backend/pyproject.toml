@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sentinel-sdn"
-version = "1.0.0"
+version = "1.2.0"
 description = "Real SDN telemetry and machine learning DDoS detection"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115,<1", "uvicorn[standard]>=0.34,<1",
   "psycopg[binary,pool]>=3.2,<4", "pydantic-settings>=2.7,<3",
   "argon2-cffi>=23.1,<26", "httpx>=0.28,<1",
-  "numpy>=2.2,<3", "scikit-learn>=1.6,<2", "joblib>=1.4,<2"
+  "google-auth[requests]>=2.62,<3", "numpy>=2.2,<3", "scikit-learn>=1.6,<2", "joblib>=1.4,<2"
 ]
 
 [project.optional-dependencies]

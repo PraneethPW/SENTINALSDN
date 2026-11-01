@@ -2,7 +2,7 @@ import hashlib
 import secrets
 
 from argon2 import PasswordHasher
-from argon2.exceptions import VerificationError
+from argon2.exceptions import VerificationError, InvalidHashError
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -21,13 +21,13 @@ def digest(value: str) -> str:
 def verify(password: str, encoded: str) -> bool:
     try:
         return passwords.verify(encoded, password)
-    except VerificationError:
+    except (VerificationError, InvalidHashError):
         return False
 
 
 async def user_from_token(token: str):
     user = await db.one(
-        """SELECT u.id,u.email,u.role,s.expires_at,s.token_hash FROM sessions s
+        """SELECT u.id,u.email,u.role,u.approved,u.display_name,u.password_enabled,s.expires_at,s.token_hash FROM sessions s
         JOIN users u ON u.id=s.user_id WHERE s.token_hash=%s AND s.expires_at>now() AND u.active""",
         (digest(token),),
     )
@@ -36,10 +36,16 @@ async def user_from_token(token: str):
     return user
 
 
-async def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
+async def identity_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
     if not credentials:
         raise HTTPException(401, "Sign in to access your network.")
     return await user_from_token(credentials.credentials)
+
+
+async def current_user(user=Depends(identity_user)):
+    if not user["approved"]:
+        raise HTTPException(403, "Your account is awaiting workspace approval")
+    return user
 
 
 async def operator(user=Depends(current_user)):
@@ -57,4 +63,7 @@ async def collector_auth(credentials: HTTPAuthorizationCredentials | None = Depe
 
 
 def public_user(user):
-    return {k: str(user[k]) if k == "id" else user[k] for k in ("id", "email", "role")}
+    return {
+        k: str(user[k]) if k == "id" else user[k]
+        for k in ("id", "email", "role", "approved", "display_name", "password_enabled")
+    }

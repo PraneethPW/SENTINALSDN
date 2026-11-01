@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { API, ApiError, request } from "./api";
 import type { Snapshot, User } from "./api";
 
-function readSession(){try{return sessionStorage.getItem("sentinel.session.v1")}catch{return null}}
-function writeSession(token:string|null){try{if(token)sessionStorage.setItem("sentinel.session.v1",token);else sessionStorage.removeItem("sentinel.session.v1")}catch{/* In-memory auth still works when browser storage is unavailable. */}}
+import {readSession,writeSession} from "./session";
 function validSnapshot(value:unknown):value is Snapshot{if(!value||typeof value!=="object")return false;const d=value as Partial<Snapshot>;return typeof d.timestamp==='string'&&Number.isFinite(Date.parse(d.timestamp))&&Array.isArray(d.flows)&&Array.isArray(d.collectors)&&Array.isArray(d.incidents)&&Array.isArray(d.commands)&&Array.isArray(d.series)&&!!d.summary&&!!d.model&&!!d.integrations}
 export function useNetwork(minutes: number) {
   const [token, setToken] = useState<string | null>(() =>

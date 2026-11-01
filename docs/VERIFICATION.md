@@ -1,13 +1,13 @@
-# Sentinel 1.1 verification — 1 November 2026
+# Sentinel 1.2 verification — 1 November 2026
 
 Verified path: actual isolated Mininet packets → three Open vSwitch switches → private OS-Ken counter and LLDP discovery API → persistent collector spool → Railway API → integrity-checked Extra Trees → Neon PostgreSQL → authenticated WebSocket → React on Vercel.
 
 ## Released targets
 
 - Frontend: https://sentinel-sdn.vercel.app/
-- Vercel deployment: `dpl_ETPYptgD3okLT5JwEwmnM28mDHSP`, READY, staged HTML verified before promotion.
+- Vercel deployment: `dpl_AagJxAwfe4DeAh5BRK7Cf2nwNezX`, READY, staged HTML verified before promotion.
 - API: https://api-production-5de58.up.railway.app/health/ready
-- Railway deployment: `f50171f9-bbc4-4f4e-81cb-ac54b2a31c25`, SUCCESS, liveness version `1.1.0`.
+- Railway deployment: `7164feaf-e1b8-4386-bd12-c75399663b96`, SUCCESS, liveness version `1.2.0`.
 - Production database: Neon, TLS, dedicated `sentinel` schema.
 - Cloud telemetry: `local-mininet-lab` on the development Mac's dedicated Colima profile, as requested.
 - Independent local frontend/API: http://localhost:5180 / http://localhost:8100, own Docker PostgreSQL and collector.
@@ -16,7 +16,7 @@ Verified path: actual isolated Mininet packets → three Open vSwitch switches �
 
 | Area | Verification and result |
 | --- | --- |
-| Automated tests | **41 backend tests + 6 frontend component tests passed**, including real PostgreSQL integration; strict TypeScript and Vite production builds pass; Ruff passes |
+| Automated tests | **54 backend tests + 10 frontend component tests passed**, including real PostgreSQL integration; strict TypeScript and Vite production builds pass; Ruff passes |
 | Auth and roles | Actual local administrator, viewer and operator sign-ins; viewer has no account-mutation controls; unauthorized writes return 403; duplicate/invalid account rejection, last-admin protection, session revocation and password validation covered by integration tests |
 | Investigations | Browser operator assigned an investigator and acknowledged a historical real lab flag with notes; acknowledgement survived reload; optimistic revisions reject concurrent overwrites in integration tests |
 | Historical evidence | Browser searched actual PostgreSQL flow history and loaded 100 rows across cursor pages; edited filters invalidate the previous cursor; literal wildcard handling and malformed cursors tested; CSV export returns real stored observations |
@@ -34,6 +34,21 @@ Verified path: actual isolated Mininet packets → three Open vSwitch switches �
 | Persistence | Numbered additive migration, schema isolation, transactional audit and revision events; retention and batch idempotency covered in real PostgreSQL tests |
 
 The backend test runner emits one Starlette deprecation warning about its httpx test-client adapter; all tests pass. CI configuration runs the suites on a dedicated PostgreSQL service. Current remote run status is available in the repository’s GitHub Actions tab.
+
+## Public entry and real identity verification
+
+- `/` is a dedicated public landing page; `/auth/sign-in` and `/auth/register` are distinct email/Google entry routes. The console is at `/app`, protected before it mounts.
+- The landing's animated numbers are fetched from the installed model's public metadata. No live flow, endpoint, collector, incident or account record is exposed by the anonymous facts endpoint.
+- Desktop and 390×844 mobile landing/registration layouts were inspected. Scroll-linked movement, real model-value counters, glass cards, keyboard navigation, reduced motion and same-origin deep links were exercised.
+- An account was registered through the actual independent local API. Browser email sign-in reached the pending-approval screen; telemetry and live-ticket requests returned 403. Administrator approval led to a viewer console with live measurements. Deactivation revoked the session and returned the browser to sign-in. This clearly labeled local QA account was then left inactive.
+- The user completed **real Google registration locally**. Google's callback verified the identity and created a pending Google-only account in the local PostgreSQL database. The verified project owner's identity was then configured as a local administrator through the existing local administrator API; ordinary registrations remain pending viewers.
+- The user authorized connecting Google to the **existing production administrator account**. The UI confirmed the persistent Google connection. A separate sign-out → Google sign-in → callback → authenticated live console flow was then completed successfully in production. A subsequent fresh Google sign-in also reached the independent local console.
+- Google state-cookie, nonce, browser handoff, one-use exchange, origin restrictions, duplicate email protection and explicit authenticated account connection have PostgreSQL integration tests. Provider-boundary fixtures are confined to the isolated test runner; the browser verifications above used the actual Google provider and runtime credentials.
+- A Google-page/browser log reported a transient MutationObserver error during OAuth; the real callback and subsequent authenticated console worked. This message is recorded rather than represented as a completely clean log across external provider navigation.
+
+## Current live-model observation
+
+The lab ran continuously through this release. Some long-running, low-packet ICMP windows were model-flagged despite the configured benign workload; they did not pass the minimum packet count for incident creation. This is additional evidence of domain/generalization limits, not a reason to relabel observations or claim production detection effectiveness. The landing displays the artifact's attributed public group-test metrics, not a live detection-accuracy estimate. Enforcement remains disabled.
 
 ## Measured local concurrency
 

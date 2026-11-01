@@ -4,6 +4,9 @@ export const API = (
 export type User = {
   id: string;
   email: string;
+  approved?: boolean;
+  display_name?: string;
+  password_enabled?: boolean;
   role: "admin" | "operator" | "viewer";
 };
 export type Flow = {
@@ -140,7 +143,9 @@ export async function request<T>(
       response.status,
       typeof data.detail === "string"
         ? data.detail
-        : `Request failed (${response.status})`,
+        : Array.isArray(data.detail)
+          ? data.detail.slice(0,3).map((item:{msg?:string})=>typeof item.msg==='string'?item.msg.replace(/^Value error, /,''):'Invalid input').join('. ')
+          : `Request failed (${response.status})`,
     );
   return data as T;
 }

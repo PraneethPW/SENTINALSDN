@@ -26,6 +26,10 @@ Set these service variables through Railway's Variables UI, or a secure credenti
 | RETENTION_DAYS | 7 (configurable 1–90) |
 | OPENROUTER_API_KEY | optional provider key |
 | OPENROUTER_MODEL | openrouter/free |
+| REGISTRATION_ENABLED | true, with mandatory administrator approval |
+| GOOGLE_CLIENT_ID | Google OAuth web application client ID |
+| GOOGLE_CLIENT_SECRET | backend-only client secret |
+| GOOGLE_REDIRECT_URI | exact HTTPS API callback URL |
 
 No secrets are needed during image build. The Docker container runs as a non-root user. Railway provides `PORT`. Generate a Railway HTTPS domain and record it. Do not enable request logging of WebSocket query strings; tickets are one-use and expire after 30 seconds but are still credentials.
 

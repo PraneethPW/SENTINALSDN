@@ -194,9 +194,27 @@ The supplied artifact expects 30-second observations. Windows outside ±5 second
 - Commands are queued in PostgreSQL with leases. The collector installs the rule and reads it back from the actual switch. Only then is it recorded as enforced. Revocation is also verified. Unconfirmed or failed commands are shown honestly. Commands over two minutes old are rejected by the collector.
 - Optional `OPENROUTER_API_KEY` enables summaries through `openrouter/free`. Counts and model evidence are sent to OpenRouter; IPs, user identity, and investigation notes are excluded. Free providers have quotas and variable availability. AI failure never disables detection, and AI never executes a rule.
 
+## Landing, registration and Google sign-in
+
+The public homepage is `/`. Email sign-in is `/auth/sign-in`, registration is `/auth/register`, the account approval screen is `/account`, and the authenticated console is `/app`. The landing includes a lazy-loaded 3D signal core, pointer-responsive glass cards, scroll-linked motion, model-backed animated numbers, accessible navigation, and reduced-motion controls. `/api/public/overview` exposes only published model facts; operational telemetry remains private.
+
+Email registration stores an Argon2 hash and creates a **pending viewer**. It does not claim inbox verification or send an email. New accounts can sign in immediately, but cannot read telemetry or obtain live tickets until an administrator approves them in System settings. This is a shared workspace, not personal multi-tenant networks. Approval grants preserve the signed-in identity so the account screen can refresh into the console; revocation, deactivation and role changes revoke sessions.
+
+Google uses a real web OAuth client, server-side code exchange, PKCE, state cookies, nonce and Google ID-token verification. The frontend receives a short-lived, one-use handoff bound to its browser verifier. No Google secret, access token or application session is placed in the frontend bundle or redirect URL. Google-only registrations also start as pending viewers. A matching email alone never links an existing password account: sign in with the password first, then choose **Connect Google** in System settings and authenticate the matching Google account.
+
+Configure `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` on the backend. The secret stays out of Git and frontend variables. In Google Cloud, configure:
+
+| Setting | URLs |
+| --- | --- |
+| Authorized JavaScript origins | `https://sentinel-sdn.vercel.app`, `http://localhost:5180`, `http://localhost:5173` |
+| Production redirect | `https://api-production-5de58.up.railway.app/api/auth/google/callback` |
+| Local redirect | `http://localhost:5180/api/auth/google/callback` |
+
+For the Docker local stack, put optional `LOCAL_GOOGLE_CLIENT_ID` and `LOCAL_GOOGLE_CLIENT_SECRET` in ignored `.env.local-stack`, then run `npm run local:up`. The local callback is set automatically. Google identity necessarily uses Google's servers; local monitoring, database, inference and email/password access remain independent of the deployed services. With no provider credentials, Google is visibly unavailable and email access remains usable. While the OAuth app is in Testing, configure the intended Google test users in Google Auth Platform → Audience. Google consent branding belongs to the Google project: a reused project may show its existing application name. Use a dedicated project for independent Sentinel branding.
+
 ## Release verification
 
-Sentinel 1.1: **41 backend + 6 frontend tests passed**; local PostgreSQL recovery, live browser workflows, mobile layout, concurrent connections and both cloud deployments verified. See the detailed record for scope and model limits.
+Sentinel 1.2: **54 backend + 10 frontend tests passed**; local PostgreSQL recovery, live browser workflows, mobile layout, concurrent connections and both cloud deployments verified. See the detailed record for scope and model limits.
 
 ## Deployment and verification
 

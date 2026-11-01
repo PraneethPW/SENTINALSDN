@@ -27,5 +27,5 @@ const executable=plugin?'docker':'docker-compose';
 const base=plugin?['--context',context,'compose','--env-file',file,'-f','compose.local.yml']:['--context',context,'--env-file',file,'-f','compose.local.yml'];
 if(action==='up'){
  run(executable,[...base,'up','--build','--wait','--wait-timeout','240','-d']);
- console.log('\nSentinel local: http://localhost:5180\nAPI: http://localhost:8100\nCredentials: npm run local:credentials\nDatabase, inference, and real SDN packets run locally. No cloud credentials are used.\nAllow 60 seconds for discovery and the first valid ML window.');
+ console.log('\nSentinel local: http://localhost:5180\nAPI: http://localhost:8100\nCredentials: npm run local:credentials\nDatabase, inference, and real SDN packets run locally. Google sign-in uses optional provider credentials.\nAllow 60 seconds for discovery and the first valid ML window.');
 }else run(executable,[...base,...({down:['down'],status:['ps'],logs:['logs','--tail','100','-f']}[action])]);

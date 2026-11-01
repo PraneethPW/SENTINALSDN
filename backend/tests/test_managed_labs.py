@@ -178,6 +178,14 @@ def test_expiry_revokes_before_daemon_cleanup(client, host, deadline):
     client.post("/api/lab-host/poll", headers=host, json={"ready": True, "capacity": 2, "version": "test"})
     state = client.get("/api/workspace/lab", headers=user).json()["run"]
     assert state["state"] == "expired" and state["cleanup_pending"]
+    response = client.post(
+        f"/api/lab-host/runs/{run['id']}/report",
+        headers=host,
+        json={"revision": state["revision"], "event": "stopped"},
+    )
+    assert response.status_code == 200
+    finished = client.get("/api/workspace/lab", headers=user).json()["run"]
+    assert finished["state"] == "expired" and finished["stopped_at"]
 
 
 def test_presence_is_scoped_and_bounded(client, host):
@@ -226,6 +234,16 @@ def test_start_timeout_and_global_external_capacity(client, host):
         "/api/lab-host/poll",
         headers=host,
         json={"ready": True, "capacity": 2, "external_busy": 2, "version": "test"},
+    )
+    failed = client.get("/api/workspace/lab", headers=user).json()["run"]
+    assert failed["state"] == "failed"
+    assert (
+        client.post(
+            f"/api/lab-host/runs/{run['id']}/report",
+            headers=host,
+            json={"revision": failed["revision"], "event": "stopped"},
+        ).status_code
+        == 200
     )
     assert client.get("/api/workspace/lab", headers=user).json()["run"]["state"] == "failed"
     assert start(client, owner(client)).status_code == 409

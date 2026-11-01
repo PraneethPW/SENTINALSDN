@@ -123,7 +123,9 @@ class LabIntent(BaseModel):
     request_id: UUID = Field(default_factory=uuid4)
 
 
-async def stop_run(conn, row, actor, reason="Stopped by the workspace administrator."):
+async def stop_run(
+    conn, row, actor, reason="Stop requested. Uploads are disabled while the host cleans up your network."
+):
     await conn.execute(
         "UPDATE managed_labs SET desired_state='stopped',state='stopping',message=%s,revision=revision+1,updated_at=now() WHERE id=%s",
         (reason, row["id"]),
@@ -343,13 +345,15 @@ async def report(run_id: UUID, body: HostReport, host=Depends(host_auth)):
                 )
         else:
             state = "stopped" if body.event == "stopped" and row["desired_state"] == "stopped" else "failed"
-            if row["state"] == "expired":
-                state = "expired"
+            if row["state"] in ("expired", "failed"):
+                state = row["state"]
             message = (
                 row["message"]
                 if row["desired_state"] == "stopped"
                 else "The lab process stopped unexpectedly. Please start a new session."
             )
+            if state == "stopped":
+                message = "Network stopped. Your measurements are retained."
             await conn.execute(
                 "UPDATE managed_labs SET desired_state='stopped',state=%s,stopped_at=now(),updated_at=now(),message=%s WHERE id=%s",
                 (state, message, run_id),

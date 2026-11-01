@@ -22,7 +22,7 @@ Verified path: actual isolated Mininet packets â†’ three Open vSwitch switches â
 | Historical evidence | Browser searched actual PostgreSQL flow history and loaded 100 rows across cursor pages; edited filters invalidate the previous cursor; literal wildcard handling and malformed cursors tested; CSV export returns real stored observations |
 | Realtime | 20 concurrent authenticated WebSockets received snapshots; two-client integration test received committed investigation changes within three seconds; one-use tickets, disallowed origins and invalid ranges tested |
 | Shared fanout | One revision poll per API process at 500 ms, shared consistent snapshot caches, five-second clock refresh. Actual counter sampling remains approximately 30 seconds |
-| Recovery | Local API intentionally stopped and restarted; browser displayed reconnecting and resumed without another sign-in. PostgreSQL container restarted; API recovered. Collector retained and delivered queued measured batches after the API interruption |
+| Recovery | Local API intentionally stopped and restarted; browser displayed reconnecting and resumed without another sign-in. PostgreSQL container restarted; API recovered. Collector retained and delivered queued measured batches after the API interruption. A separate collector shutdown aged to offline while the console stayed connected; topology switched to offline markers |
 | Local independence | `npm run local:up` built and ran PostgreSQL, API, trained inference, frontend and real Mininet traffic without deployed URLs, Neon or OpenRouter keys. Separate persistent volumes and generated local credentials; repeat startup preserves data/accounts |
 | Discovery | Both local and deployed snapshots/browser showed **3 switches, 2 undirected LLDP links, 3 observed hosts**, with actual per-port bytes, drops and errors; keyboard switch inspection verified |
 | Model | Active `group-20261101T055935Z`, Extra Trees, verified SHA-256, threshold 0.525. Production and local APIs returned this version. Old verdicts preserve original model versions |
@@ -33,7 +33,7 @@ Verified path: actual isolated Mininet packets â†’ three Open vSwitch switches â
 | Dependency audit | Frontend production dependency audit reported zero vulnerabilities at verification time; this is not a security certification |
 | Persistence | Numbered additive migration, schema isolation, transactional audit and revision events; retention and batch idempotency covered in real PostgreSQL tests |
 
-The backend test runner emits one Starlette deprecation warning about its httpx test-client adapter; all tests pass. CI configuration runs the suites on a dedicated PostgreSQL service, but remote GitHub Actions has not been executed by this task.
+The backend test runner emits one Starlette deprecation warning about its httpx test-client adapter; all tests pass. CI configuration runs the suites on a dedicated PostgreSQL service. Current remote run status is available in the repositoryâ€™s GitHub Actions tab.
 
 ## Measured local concurrency
 

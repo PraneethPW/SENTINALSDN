@@ -17,7 +17,7 @@ export default function PublicHeader() {
         <Brand />
         <nav aria-label="Project navigation">
           <a href="/auth/sign-in#benchmark">Detection Lab</a>
-          <a href="/#methodology">Methodology</a>
+          <a href="/#benchmark-evidence">Model results</a>
         </nav>
         <a className="research-button ghost" href={readSession() ? "/app" : "/auth/sign-in"}>
           Live workspace <ArrowUpRight size={15} />

@@ -219,7 +219,7 @@ export async function request<T>(
     ...options,
     signal: options.signal ?? AbortSignal.timeout(55000),
     headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(typeof options.body === "string" ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },

@@ -9,7 +9,8 @@ Sentinel classifies flow windows measured by OpenFlow switches and stores the re
 1. Open **Detection Lab** from the homepage, then click **Run benchmark** on the sign-in page. Inside the workspace, open **Detection Lab** from the sidebar. The API scores 4,050 published 30-second windows across 30 held-out groups using the checksum-verified model. This works without an account, managed lab, or dataset download.
 2. At **52.5%**, expect **1,428 true positives, 257 false negatives, 52 false positives, and 2,313 true negatives**. Select **False negative**, open a window, and compare the five inputs, score, verdict, and published label.
 3. Change the threshold or filter by protocol to see the precision and recall trade-off. **Export CSV** downloads all matching windows with their inputs, labels, scores, threshold, run ID, and checksums. **Reset** restores the live detector's configured threshold to the benchmark display.
-4. To see real-time measurements, open **Live workspace → Network setup → Start my live lab**. After flows arrive, go to **Live traffic → Inspect** for a stored verdict and its model version.
+4. Select **Try your dataset** to upload feature CSVs or live-flow exports. Add known labels for accuracy metrics or upload without labels for predictions.
+5. To see real-time measurements, open **Live workspace → Network setup → Start my live lab**. After flows arrive, go to **Live traffic → Inspect** for a stored verdict and its model version.
 
 The benchmark uses the published lab split used by the original project evaluation. Its accuracy describes these windows. The live Mininet workspace produces fresh bounded traffic from its own OpenFlow switches. See [reviewer walkthrough and reproduction](docs/DETECTION_LAB.md).
 

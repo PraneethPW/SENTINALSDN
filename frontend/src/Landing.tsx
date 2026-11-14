@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowRight, ArrowUpRight, Binary, Network, ScanLine } from "lucide-react";
 import PublicHeader, { Brand } from "./components/PublicHeader";
 import { readSession } from "./session";
+import BenchmarkReference from "./components/BenchmarkReference";
 
 export default function Landing() {
   return (
@@ -19,13 +20,18 @@ export default function Landing() {
               <a className="research-button primary" href="/auth/sign-in#benchmark">
                 Open Detection Lab <ArrowRight size={19} />
               </a>
-              <a className="research-button ghost" href="#methodology">
-                How it works <ArrowDown size={16} />
+              <a className="research-button ghost" href="#benchmark-evidence">
+                View results <ArrowDown size={16} />
               </a>
             </div>
           </div>
           <div className="research-hero-caption">OPENFLOW 1.3 <span /> EXTRA TREES CLASSIFIER</div>
         </section>
+        <div id="benchmark-evidence" className="landing-reference">
+          <BenchmarkReference action={
+            <a className="research-button ghost" href="/auth/sign-in#upload-dataset">Try your dataset <ArrowUpRight size={16} /></a>
+          } />
+        </div>
         <section className="research-method" id="methodology" aria-labelledby="method-title">
           <div className="research-section-title">
             <div>

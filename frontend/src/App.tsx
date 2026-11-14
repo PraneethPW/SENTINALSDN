@@ -45,6 +45,7 @@ import { API, compact, protocolName, request, time } from "./api";
 import type { Flow, Incident, User } from "./api";
 import FlowEvidence from "./components/FlowEvidence";
 import DetectionLab from "./DetectionLab";
+import BenchmarkReference from "./components/BenchmarkReference";
 import { useNetwork } from "./useNetwork";
 import { WorkspaceControls, FlowHistory } from "./components/WorkspaceControls";
 import { Topology, TrafficChart } from "./components/Charts";
@@ -871,6 +872,13 @@ export default function App() {
                       </div>
                     </div>
                   </section>
+                  <div className="workspace-reference">
+                    <BenchmarkReference layout="compact" action={
+                      <button className="research-text-link" onClick={() => navigate("benchmark")}>
+                        Run benchmark or upload CSV <ArrowRight size={15} />
+                      </button>
+                    } />
+                  </div>
                   <div className="telemetry-heading" id="telemetry">
                     <span className="eyebrow">
                       <Radio size={13} /> NETWORK PULSE
@@ -1458,6 +1466,9 @@ export default function App() {
                           </p>
                         </div>
                       )}
+                      <button className="button secondary" onClick={() => navigate("benchmark")}>
+                        Evaluate this model <ArrowRight size={15} />
+                      </button>
                       <div className="feature-list">
                         {(
                           data?.model.features ?? [

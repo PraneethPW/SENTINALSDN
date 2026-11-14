@@ -34,6 +34,32 @@ shares the detector's scoring method with live ingestion. The run produces
 no workspace records. OpenFlow observations arrive on a separate
 authenticated endpoint and are delivered to the console over WebSocket.
 
+## Evaluate your own dataset
+
+Select **Try your dataset** on the sign-in page or in the workspace Detection Lab.
+Download the CSV template or export measured windows from **Live traffic**.
+Upload up to 5,000 windows in a UTF-8 CSV up to 1 MB. For a larger live export, choose a shorter time range or split the CSV and retain the header in each file.
+
+| Required column | Measurement |
+| --- | --- |
+| `packet_rate` | Packets per second |
+| `byte_rate` | Bytes per second |
+| `mean_packet_size` | Bytes per packet |
+| `duration_seconds` | Flow age in seconds |
+| `protocol` | ICMP, TCP, UDP, or 1, 6, 17 |
+
+Use the model’s 30-second sampling cadence. Include `interval_seconds` to check
+the cadence against the same ±5-second tolerance as live ingestion. Include
+`label` with 0/benign or 1/attack to measure precision, recall and false-positive
+rate. Omit the column or leave individual labels blank to receive predictions
+without assigning a ground-truth outcome. Accuracy estimates depend on how you
+collected and labeled the windows.
+
+The server scores the uploaded measurements in memory. Extra columns are
+ignored. Include only the numeric features and labels when sharing a dataset.
+The CSV export includes the upload SHA-256, configured threshold, model version,
+row number and scores. Runs do not change model settings or workspace telemetry.
+
 ## Observe fresh SDN telemetry
 
 Sign up or sign in, open **Network setup**, and choose **Start my live lab**.

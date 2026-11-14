@@ -328,7 +328,8 @@ async def revoke(command_id: UUID, user=Depends(operator)):
 async def export_flows(minutes: int = Query(default=15, ge=1, le=60), user=Depends(current_user)):
     rows = await db.fetch(
         """SELECT observed_at,collector_id,switch_id,source_ip,destination_ip,protocol,packets,bytes,
-        packet_rate,byte_rate,prediction,attack_probability,model_version FROM flows
+        packet_rate,byte_rate,prediction,attack_probability,model_version,
+        bytes::double precision / packets AS mean_packet_size,duration_seconds,interval_seconds FROM flows
         WHERE workspace_id=%s AND observed_at>now()-make_interval(mins=>%s) ORDER BY observed_at DESC LIMIT 10000""",
         (user["workspace_id"], minutes),
     )
@@ -347,6 +348,9 @@ async def export_flows(minutes: int = Query(default=15, ge=1, le=60), user=Depen
         "prediction",
         "attack_probability",
         "model_version",
+        "mean_packet_size",
+        "duration_seconds",
+        "interval_seconds",
     ]
     writer = csv.DictWriter(output, fieldnames=fields)
     writer.writeheader()

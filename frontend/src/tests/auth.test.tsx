@@ -39,7 +39,7 @@ describe("public account entry", () => {
               inference_ms: 12,
               model: { algorithm: "Extra Trees", threshold: 0.525, version: "test" },
               dataset: {
-                rows: 1, groups: 1, split: "test",
+                kind: "public", rows: 1, groups: 1, split: "test",
                 source: { authors: [], url: "https://example.test", title: "Test dataset" },
               },
               windows: [[42, 1, 0.48, 30, 512, 17, 30, 6]],

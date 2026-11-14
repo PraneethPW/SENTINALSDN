@@ -37,8 +37,8 @@ export function TrafficChart({ data }: { data: Snapshot | null }) {
         >
           <defs>
             <linearGradient id="traffic-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop stopColor="#dfb874" stopOpacity=".23" />
-              <stop offset="1" stopColor="#dfb874" stopOpacity="0" />
+              <stop stopColor="#b7ee63" stopOpacity=".23" />
+              <stop offset="1" stopColor="#b7ee63" stopOpacity="0" />
             </linearGradient>
           </defs>
           {[30, 80, 130, 180].map((y) => (
@@ -61,14 +61,14 @@ export function TrafficChart({ data }: { data: Snapshot | null }) {
               <polyline
                 points={points("bps")}
                 fill="none"
-                stroke="#dfb874"
+                stroke="#b7ee63"
                 strokeWidth="2"
                 vectorEffect="non-scaling-stroke"
               />
               <polyline
                 points={points("attack_bps")}
                 fill="none"
-                stroke="#dc796b"
+                stroke="#ff987f"
                 strokeWidth="1.5"
                 vectorEffect="non-scaling-stroke"
               />

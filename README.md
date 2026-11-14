@@ -2,7 +2,16 @@
 
 **Machine Learning-Based DDoS Attack Detection in Software Defined Networks.**
 
-A React defense console backed by measured OpenFlow telemetry, PostgreSQL persistence, a validated Extra Trees classifier, operator-controlled mitigation, and optional OpenRouter analysis. There is no seeded dashboard traffic, random alert generator, or invented model accuracy. The animated Three.js hero is explicitly decorative.
+Sentinel classifies flow windows measured by OpenFlow switches and stores the results in PostgreSQL. The live workspace shows the measured inputs and recorded model verdict for individual flows. The public **Detection Lab** reruns the same detector on labeled research data for a repeatable evaluation.
+
+## Review the project
+
+1. From the homepage, open **Detection Lab** and click **Run benchmark**. The API scores 4,050 published 30-second windows across 30 held-out groups using the checksum-verified model. This works without an account, managed lab, or dataset download.
+2. At **52.5%**, expect **1,428 true positives, 257 false negatives, 52 false positives, and 2,313 true negatives**. Select **False negative**, open a window, and compare the five inputs, score, verdict, and published label.
+3. Change the threshold or filter by protocol to see the precision and recall trade-off. **Export CSV** downloads all matching windows with their inputs, labels, scores, threshold, run ID, and checksums. **Reset** restores the live detector's configured threshold to the benchmark display.
+4. To see real-time measurements, open **Live workspace → Network setup → Start my live lab**. After flows arrive, go to **Live traffic → Inspect** for a stored verdict and its model version.
+
+The benchmark uses the published lab split used by the original project evaluation. Its accuracy describes these windows. The live Mininet workspace produces fresh bounded traffic from its own OpenFlow switches. See [reviewer walkthrough and reproduction](docs/DETECTION_LAB.md).
 
 ## Start a live lab
 
@@ -12,7 +21,7 @@ Create an account, open **Network setup**, and click **Start my live lab**. The 
 
 | Layer | Implementation |
 | --- | --- |
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, Three.js / React Three Fiber, Framer Motion |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS 4, Framer Motion |
 | API | Python 3.12, FastAPI, psycopg 3 async pool, authenticated WebSockets |
 | Database | Neon PostgreSQL in production; real PostgreSQL 17 for local verification |
 | ML | scikit-learn Extra Trees, five measured flow features, separate group training/validation/test partitions |
@@ -25,7 +34,8 @@ Create an account, open **Network setup**, and click **Start my live lab**. The 
 ```text
 Sentinel-SDN/
 ├── frontend/
-│   ├── src/components/       # Three.js scene, measured charts, LLDP topology and port inspection
+│   ├── src/components/     # Charts, LLDP topology and flow evidence
+│   ├── src/DetectionLab.tsx # Public benchmark and threshold exploration
 │   ├── src/App.tsx          # Overview, traffic, topology, incidents, intelligence, system
 │   ├── src/useNetwork.ts    # Authenticated snapshots, live updates, reconnect/backoff
 │   └── vercel.json          # Build, routing, security headers
@@ -79,7 +89,8 @@ The current live feed comes from the real Mininet/OVS lab on the development Mac
 Requirements: Node 22+, Python 3.9+, Docker and Docker Compose. On macOS install the reputable packages with `brew install colima docker docker-compose`. The launcher starts a separate Colima profile named `sentinel-sdn` (4 CPUs, 6 GiB RAM) without changing your existing Docker context. Linux uses the default Docker context; set `SENTINEL_DOCKER_CONTEXT` to override.
 
 ```bash
-cd "/Users/praneethreddy/Freelance Projects /Sentinel-SDN"
+git clone https://github.com/PraneethPW/SENTINALSDN.git
+cd SENTINALSDN
 npm run dev
 # Same command: npm run local:up
 npm run local:credentials
@@ -200,7 +211,7 @@ The supplied artifact expects 30-second observations. Windows outside ±5 second
 
 ## Landing, registration and Google sign-in
 
-The public homepage is `/`. Email sign-in is `/auth/sign-in`, registration is `/auth/register`, restricted team access is `/account`, and the authenticated console is `/app`. The landing includes a lazy-loaded 3D signal core, pointer-responsive glass cards, scroll-linked motion, model-backed animated numbers, accessible navigation, and reduced-motion controls. `/api/public/overview` exposes only published model facts; operational telemetry remains private.
+The public homepage is `/`, with Detection Lab at `/lab`. Email sign-in is `/auth/sign-in`, registration is `/auth/register`, restricted team access is `/account`, and the authenticated console is `/app`. Public routes expose the model and published benchmark results. Operational telemetry stays private.
 
 Email registration stores an Argon2 hash and immediately creates an **isolated private workspace with its registrant as administrator**. It does not claim inbox verification or send an email. New accounts enter an empty dashboard with Network setup, not an administrator-approval queue. Google-only registrations receive the same private workspace. Existing approved lab members keep their original membership and role. Migration 005 moves never-approved public registrations without an explicit approval decision stranded at pending approval into private empty workspaces; deliberately restricted team accounts remain restricted.
 
@@ -224,7 +235,7 @@ For the Docker local stack, put optional `LOCAL_GOOGLE_CLIENT_ID` and `LOCAL_GOO
 
 ## Release verification
 
-Sentinel 1.4: **73 backend + 19 frontend tests passed**; local PostgreSQL recovery, live browser workflows, mobile layout, concurrent connections and both cloud deployments verified. See the detailed record for scope and model limits.
+Detection Lab: **75 backend + 21 frontend tests passed** with an independent PostgreSQL test database. Desktop and 390 px browser checks covered inference, filtering, threshold changes, and CSV export. A separate managed Mininet browser run discovered three switches and inspected a verdict from 15 observed flow windows before stopping the lab. The [verification record](docs/VERIFICATION.md) also covers earlier releases.
 
 ## Deployment and verification
 

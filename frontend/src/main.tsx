@@ -3,7 +3,8 @@ import ReactDOM from "react-dom/client";
 import Root from "./Root";
 import {AppBoundary} from "./components/AppBoundary";
 import "./styles.css";
-import "./landing.css";
+import "./entry.css";
+import "./research.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

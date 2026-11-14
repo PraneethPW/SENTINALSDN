@@ -3,17 +3,15 @@ import type { FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   Eye,
   EyeOff,
   LoaderCircle,
   LockKeyhole,
-  ShieldCheck,
 } from "lucide-react";
 import { API, request } from "./api";
 import type { User } from "./api";
 import { writeSession } from "./session";
-import { Brand } from "./Landing";
+import { Brand } from "./components/PublicHeader";
 export type AuthResult = { token: string; user: User };
 const messages: Record<string, string> = {
   google_cancelled: "Google sign-in was cancelled. You can try again.",
@@ -147,24 +145,7 @@ export default function AuthPortal({
           </a>
         </header>
         <section className="auth-form-wrap">
-          <p className="lp-kicker">
-            {register ? "YOUR NEXT PERSPECTIVE" : "WELCOME BACK"}
-          </p>
-          <h1>
-            {register ? (
-              <>
-                Clarity starts
-                <br />
-                with <em>you.</em>
-              </>
-            ) : (
-              <>
-                Back to
-                <br />
-                <em>the signal.</em>
-              </>
-            )}
-          </h1>
+          <h1>{register ? "Create your workspace." : "Sign in to Sentinel."}</h1>
           <p className="auth-intro">
             {register
               ? "Create your private workspace, then start your live lab in one click."
@@ -325,29 +306,10 @@ export default function AuthPortal({
         </footer>
       </div>
       <aside className="auth-art">
-        <div className="auth-art-grid" />
-        <div className="auth-art-orbit">
-          <i />
-          <i />
-          <i />
-          <ShieldCheck size={90} strokeWidth={0.55} />
-        </div>
-        <span className="lp-kicker">A SYSTEM BUILT ON EVIDENCE</span>
-        <h2>
-          One workspace.
-          <br />A clearer
-          <br />
-          <em>point of view.</em>
-        </h2>
-        <p>
-          Measured network behavior. Traceable detections. Thoughtful human
-          response.
-        </p>
-        <div className="auth-art-assurance">
-          <Check size={14} />
-          Your network evidence stays in your workspace.
-        </div>
-        <span className="auth-art-label">SIGNAL INTEGRITY / HUMAN INTENT</span>
+        <p className="lp-kicker">LIVE SDN WORKSPACE</p>
+        <h2>Network evidence<br /><em>in real time.</em></h2>
+        <p>Inspect flow measurements, OpenFlow topology and detector verdicts in your private workspace.</p>
+        <a href="/lab" className="research-button ghost">Open Detection Lab <ArrowRight size={16} /></a>
       </aside>
     </main>
   );

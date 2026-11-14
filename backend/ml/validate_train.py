@@ -9,10 +9,11 @@ import joblib
 import numpy as np
 import sklearn
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, HistGradientBoostingClassifier
-from sklearn.model_selection import GroupShuffleSplit, GroupKFold
+from sklearn.model_selection import GroupKFold
 from sklearn.base import clone
 from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score, average_precision_score
 from app.detector import FEATURES
+from ml.partitions import public_partitions
 
 
 def score(y, p, t):
@@ -38,11 +39,7 @@ def train(dataset, output, benign_capture=None):
     g = np.array([r["group_id"] for r in rows])
     if not np.isfinite(x).all() or (x < 0).any():
         raise ValueError("Invalid features")
-    outer, test = next(GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=42).split(x, y, g))
-    a, b = next(
-        GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=73).split(x[outer], y[outer], g[outer])
-    )
-    fit, val = outer[a], outer[b]
+    fit, val, test = public_partitions(x, y, g)
     assert not (set(g[fit]) & set(g[val]) or set(g[fit]) & set(g[test]) or set(g[val]) & set(g[test]))
     adaptation = None
     if benign_capture:

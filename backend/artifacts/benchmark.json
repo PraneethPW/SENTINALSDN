@@ -1,0 +1,20 @@
+{
+  "archive_sha256": "eb1e44538b6282b744d19017a24a6df3cc9faf4ab94ef7e55a1367af3248662d",
+  "dataset_sha256": "5b5373b0ac4c0d5db4fa63e2fa5cf2158bb9941783d26c9b785d98a2ef06277a",
+  "rows": 4050,
+  "groups": 30,
+  "window_seconds": 30,
+  "split": "Disjoint bidirectional endpoint/protocol groups, test seed 42, validation seed 73",
+  "source": {
+    "title": "DDOS attack SDN Dataset",
+    "authors": [
+      "Nisha Ahuja",
+      "Gaurav Singal",
+      "Debajyoti Mukhopadhyay"
+    ],
+    "doi": "10.17632/jxpfjc64kr.1",
+    "url": "https://data.mendeley.com/datasets/jxpfjc64kr/1",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/"
+  }
+}

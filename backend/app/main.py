@@ -13,6 +13,7 @@ from psycopg import OperationalError
 from psycopg_pool import PoolTimeout
 
 from app.api import router
+from app.benchmark import router as benchmark_router
 from app.config import settings
 from app.db import db
 from app.detector import detector
@@ -69,6 +70,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 app.include_router(router)
+app.include_router(benchmark_router)
 app.include_router(ingest_router)
 app.include_router(operations_router)
 app.include_router(public_auth_router)

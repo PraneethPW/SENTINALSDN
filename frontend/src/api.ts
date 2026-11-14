@@ -23,6 +23,9 @@ export type Flow = {
   byte_rate: number;
   prediction: string;
   attack_probability: number | null;
+  duration_seconds: number;
+  interval_seconds: number;
+  model_version: string | null;
 };
 export type Incident = {
   id: string;

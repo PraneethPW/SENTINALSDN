@@ -1,15 +1,13 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
   AnimatePresence,
   motion,
   useReducedMotion,
   useScroll,
-  useTransform,
 } from "framer-motion";
 import {
   Activity,
-  ArrowDown,
   ArrowDownToLine,
   ArrowRight,
   ArrowUpRight,
@@ -23,7 +21,6 @@ import {
   Cpu,
   Database,
   Eye,
-  Fingerprint,
   Layers3,
   LoaderCircle,
   LockKeyhole,
@@ -32,6 +29,7 @@ import {
   Network,
   Pause,
   Radio,
+  ScanLine,
   Search,
   Server,
   Settings2,
@@ -44,13 +42,13 @@ import {
   Zap,
 } from "lucide-react";
 import { API, compact, protocolName, request, time } from "./api";
-import type { Incident, User } from "./api";
+import type { Flow, Incident, User } from "./api";
+import FlowEvidence from "./components/FlowEvidence";
 import { useNetwork } from "./useNetwork";
 import { WorkspaceControls, FlowHistory } from "./components/WorkspaceControls";
 import { Topology, TrafficChart } from "./components/Charts";
 import NetworkSetup from "./components/NetworkSetup";
 
-const NetworkScene = lazy(() => import("./components/NetworkScene"));
 const sections = [
   { id: "overview", label: "Overview", icon: Layers3 },
   { id: "traffic", label: "Live traffic", icon: Waves },
@@ -62,22 +60,22 @@ const sections = [
 ] as const;
 type Section = (typeof sections)[number]["id"];
 const titles: Record<Section, [string, string]> = {
-  overview: ["Network overview", "A clearer view. A stronger perimeter."],
+  overview: ["Live workspace", "Monitor OpenFlow measurements and investigate model detections."],
   traffic: ["Live traffic", "Measured flow windows from your workspace."],
   topology: [
     "Network topology",
-    "Discover the infrastructure behind the signal.",
+    "Inspect controller-discovered switches, links and hosts.",
   ],
   incidents: [
     "Incident center",
-    "Investigate the evidence. Control the response.",
+    "Review flagged flows and track incident decisions.",
   ],
   intelligence: [
     "Intelligence",
-    "Measured by machine learning. Interpreted with context.",
+    "Inspect the installed model and saved incident analyses.",
   ],
-  system: ["System settings", "Every connection, accounted for."],
-  setup: ["Network setup", "Connect your network. Follow every measurement."],
+  system: ["System settings", "Manage access, integrations and audit history."],
+  setup: ["Network setup", "Start a Mininet lab or connect an OpenFlow collector."],
 };
 
 function Modal({
@@ -92,6 +90,7 @@ function Modal({
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => {
@@ -130,9 +129,10 @@ function Modal({
   return (
     <motion.div
       className="modal-backdrop"
-      initial={{ opacity: 0 }}
+      initial={reduced ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      transition={reduced ? { duration: 0 } : undefined}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -143,7 +143,7 @@ function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
         className={`modal ${wide ? "wide" : ""}`}
-        initial={{ y: 20, scale: 0.98 }}
+        initial={reduced ? false : { y: 20, scale: 0.98 }}
         animate={{ y: 0, scale: 1 }}
       >
         <div className="modal-heading">
@@ -278,12 +278,7 @@ export default function App() {
     }[]
   >([]);
   const { scrollYProgress: pageProgress } = useScroll();
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ["start start", "end start"],
-  });
-  const sceneY = useTransform(scrollYProgress, [0, 1], [0, reduced ? 0 : 60]);
+  const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null);
   const openIncidents =
     data?.summary.open_incidents ??
     data?.incidents.filter((i) => i.status !== "resolved").length ??
@@ -320,6 +315,7 @@ export default function App() {
   useEffect(() => {
     if (!token) {
       setSelected(null);
+      setSelectedFlow(null);
       setReport("");
       setReports([]);
     }
@@ -458,6 +454,7 @@ export default function App() {
             <th>Packet rate</th>
             <th>ML verdict</th>
             <th>Observed</th>
+            <th>Evidence</th>
           </tr>
         </thead>
         <tbody>
@@ -501,6 +498,7 @@ export default function App() {
                 </Badge>
               </td>
               <td className="mono muted">{time(flow.observed_at)}</td>
+              <td><button className="text-button" onClick={() => setSelectedFlow(flow)} aria-label={`Inspect flow ${flow.id}`}>Inspect <ChevronRight size={13} /></button></td>
             </tr>
           ))}
         </tbody>
@@ -581,7 +579,6 @@ export default function App() {
               {id === "incidents" && openIncidents > 0 ? (
                 <b>{openIncidents}</b>
               ) : null}
-              {id === "overview" ? <span className="nav-key">01</span> : null}
             </button>
           ))}
         </nav>
@@ -601,6 +598,9 @@ export default function App() {
               ) : null}
             </button>
           ))}
+          <a className="nav-item benchmark-nav" href="/lab">
+            <ScanLine size={17} strokeWidth={1.5} /><span>Detection Lab</span><ArrowUpRight size={14} />
+          </a>
         </nav>
         <div className="sidebar-bottom">
           <div className="engine-card">
@@ -630,8 +630,6 @@ export default function App() {
               ← Sentinel home
             </a>
             <span className="version">SENTINEL / 1.4</span>
-            <span className="footer-dot" />{" "}
-            <span>OBSERVE. UNDERSTAND. DEFEND.</span>
           </div>
         </div>
       </aside>
@@ -729,9 +727,6 @@ export default function App() {
         <main id="main" tabIndex={-1}>
           <div className="page-heading">
             <div>
-              <div className="eyebrow page-eyebrow">
-                <span className="small-cross">+</span> OBSERVABILITY & DEFENSE
-              </div>
               <h1>{titles[section][0]}</h1>
               <p>{titles[section][1]}</p>
             </div>
@@ -856,104 +851,18 @@ export default function App() {
               ) : null}
               {section === "overview" ? (
                 <>
-                  {token &&
-                  user &&
-                  data &&
-                  (data.workspace?.kind === "private" ||
-                    !data.collectors.length) ? (
-                    <NetworkSetup
-                      token={token}
-                      user={user}
-                      data={data}
-                      refresh={network.refresh}
-                    />
-                  ) : null}
-                  <section
-                    className="hero-panel"
-                    ref={heroRef}
-                    hidden={!!data && !data.collectors.length}
-                  >
-                    <div className="hero-grid" />
-                    <div className="hero-topline">
-                      <span>
-                        <i />
-                        <span className="type-label">
-                          INTELLIGENT NETWORK DEFENSE
-                        </span>
-                      </span>
-                      <span className="hero-index">SYSTEM / 001</span>
-                    </div>
+                  <section className="hero-panel workspace-hero">
                     <div className="hero-copy">
-                      <h2>
-                        See the signal.
-                        <br />
-                        <span>Stop the surge.</span>
-                      </h2>
-                      <p>
-                        Machine learning meets network intelligence.
-                        <br />
-                        Your software defined network, one step ahead.
+                      <p className="workspace-hero-state">
+                        <Radio size={15} /> {liveTelemetry ? "Collector reporting" : "Awaiting a collector"}
                       </p>
+                      <h2>{liveTelemetry ? "Inspect measured network flows." : "Connect a telemetry source."}</h2>
+                      <p>Follow OpenFlow measurements through the trained DDoS detector as new windows arrive.</p>
                       <div className="hero-actions">
-                        <button
-                          className="button primary"
-                          onClick={() =>
-                            user ? navigate("traffic") : setLoginOpen(true)
-                          }
-                        >
-                          {user
-                            ? "Explore live traffic"
-                            : "Connect your network"}
-                          <ArrowUpRight size={16} />
+                        <button className="button primary" onClick={() => navigate(liveTelemetry ? "traffic" : "setup")}>
+                          {liveTelemetry ? "Inspect live traffic" : "Open network setup"} <ArrowRight size={16} />
                         </button>
-                        <button
-                          className="hero-link"
-                          onClick={() =>
-                            document
-                              .getElementById("telemetry")
-                              ?.scrollIntoView({
-                                behavior: reduced ? "instant" : "smooth",
-                              })
-                          }
-                        >
-                          Explore workspace <ArrowDown size={14} />
-                        </button>
-                      </div>
-                    </div>
-                    <motion.div
-                      className="hero-scene"
-                      style={{ y: sceneY }}
-                      aria-hidden="true"
-                    >
-                      <Suspense
-                        fallback={
-                          <div className="scene-fallback">
-                            <span />
-                            <span />
-                            <span />
-                          </div>
-                        }
-                      >
-                        <NetworkScene reduced={reduced} />
-                      </Suspense>
-                    </motion.div>
-                    <div className="scene-label">
-                      <span className="scene-cross">+</span>
-                      <div>
-                        ADAPTIVE DEFENSE MESH
-                        <small>Conceptual network geometry</small>
-                      </div>
-                    </div>
-                    <div className="hero-bottom">
-                      <span>
-                        <Fingerprint size={14} /> BUILT FOR THE UNEXPECTED
-                      </span>
-                      <div className="pipeline">
-                        <span>COLLECT</span>
-                        <i />
-                        <span>DETECT</span>
-                        <i />
-                        <span>DEFEND</span>
+                        <a className="button secondary" href="/lab">Run the benchmark <ArrowUpRight size={15} /></a>
                       </div>
                     </div>
                   </section>
@@ -1023,7 +932,7 @@ export default function App() {
                         icon: Network,
                         tag: "NETWORK",
                       },
-                    ].map(({ label, value, caption, icon: Icon, tag }, i) => (
+                    ].map(({ label, value, caption, icon: Icon, tag }) => (
                       <motion.div
                         className="metric-card"
                         key={label}
@@ -1032,7 +941,6 @@ export default function App() {
                         <div className="metric-top">
                           <Icon size={17} strokeWidth={1.4} />
                           <span>{tag}</span>
-                          <span className="metric-index">0{i + 1}</span>
                         </div>
                         <p>{label}</p>
                         <div className="metric-value">{value}</div>
@@ -1832,13 +1740,16 @@ export default function App() {
               <span className="footer-brand">S /</span>
               <span>Machine Learning-Based DDoS Attack Detection in SDN</span>
             </div>
-            <span>
-              VISIBILITY IS YOUR FIRST DEFENSE{" "}
-              <span className="small-cross">+</span>
-            </span>
           </footer>
         </main>
       </div>
+      <AnimatePresence>
+        {selectedFlow ? (
+          <Modal title={`Flow #${selectedFlow.id}`} onClose={() => setSelectedFlow(null)} wide>
+            <FlowEvidence flow={selectedFlow} />
+          </Modal>
+        ) : null}
+      </AnimatePresence>
       <AnimatePresence>
         {loginOpen ? (
           <Modal

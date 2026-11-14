@@ -8,12 +8,14 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import Landing, { Brand } from "./Landing";
+import Landing from "./Landing";
+import { Brand } from "./components/PublicHeader";
 import AuthPortal from "./AuthPortal";
 import type { AuthResult } from "./AuthPortal";
 import { request } from "./api";
 import type { User } from "./api";
 import { readSession, writeSession, endSession } from "./session";
+const DetectionLab = lazy(() => import("./DetectionLab"));
 const Console = lazy(() => import("./App"));
 let handoff: { key: string; promise: Promise<AuthResult> } | null = null;
 function completeGoogle(code: string, verifier: string) {
@@ -292,5 +294,11 @@ export default function Root() {
   if (path === "/auth/callback") return <Callback />;
   if (path === "/app" || path === "/account") return <WorkspaceGate />;
   if (path === "/privacy") return <Privacy />;
+  if (path === "/lab")
+    return (
+      <Suspense fallback={<EntryShell><LoaderCircle className="spin" aria-label="Loading Detection Lab" /></EntryShell>}>
+        <DetectionLab />
+      </Suspense>
+    );
   return <Landing />;
 }

@@ -55,12 +55,15 @@ class Detector:
             self.model = None
             self.error = "Model failed validation; inspect backend logs"
 
+    def attack_scores(self, matrix: np.ndarray) -> np.ndarray:
+        return self.model.predict_proba(matrix)[:, 1]
+
     def predict(self, flows: list[Flow]):
         if self.model is None:
             return [("unclassified", None) for _ in flows]
         if not flows:
             return []
-        probabilities = self.model.predict_proba(np.array([features(flow) for flow in flows]))[:, 1]
+        probabilities = self.attack_scores(np.array([features(flow) for flow in flows]))
         window = self.metadata.get("window_seconds")
         return [
             ("unclassified", None)

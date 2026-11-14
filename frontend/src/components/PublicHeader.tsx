@@ -1,5 +1,6 @@
 import { ArrowUpRight, Shield } from "lucide-react";
 import { readSession } from "../session";
+import { MotionToggle } from "./CinematicScene";
 
 export function Brand() {
   return (
@@ -19,9 +20,12 @@ export default function PublicHeader() {
           <a href="/auth/sign-in#benchmark">Detection Lab</a>
           <a href="/#benchmark-evidence">Model results</a>
         </nav>
-        <a className="research-button ghost" href={readSession() ? "/app" : "/auth/sign-in"}>
-          Live workspace <ArrowUpRight size={15} />
-        </a>
+        <div className="research-nav-actions">
+          <MotionToggle />
+          <a className="research-button ghost" href={readSession() ? "/app" : "/auth/sign-in"}>
+            Live workspace <ArrowUpRight size={15} />
+          </a>
+        </div>
       </div>
     </header>
   );

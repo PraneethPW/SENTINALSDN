@@ -14,6 +14,8 @@ import { writeSession } from "./session";
 import { Brand } from "./components/PublicHeader";
 import DetectionLab from "./DetectionLab";
 import BenchmarkReference from "./components/BenchmarkReference";
+import { CinematicBackdrop, CinematicChapter, MotionToggle } from "./components/CinematicScene";
+import { useMotionPreference } from "./motionPreference";
 export type AuthResult = { token: string; user: User };
 const messages: Record<string, string> = {
   google_cancelled: "Google sign-in was cancelled. You can try again.",
@@ -77,6 +79,7 @@ export default function AuthPortal({
 }: {
   register?: boolean;
 }) {
+  const { reduced } = useMotionPreference();
   const [config, setConfig] = useState<{
       registration: boolean;
       google: boolean;
@@ -137,180 +140,186 @@ export default function AuthPortal({
     }
   }
   return (
-    <main className={`auth-page${register ? "" : " auth-with-benchmark"}`}>
-      <div className="auth-main">
-        <header>
-          <Brand />
-          {register ? (
-            <a href="/" className="auth-back"><ArrowLeft size={15} /> Back to Sentinel</a>
-          ) : (
-            <a href="#benchmark" className="research-text-link auth-benchmark-link">Detection Lab <ArrowRight size={14} /></a>
-          )}
-        </header>
-        <section className="auth-form-wrap">
-          <h1>{register ? "Create your workspace." : "Sign in to Sentinel."}</h1>
-          <p className="auth-intro">
-            {register
-              ? "Create your private workspace, then start your live lab in one click."
-              : "Sign in to see live flows and alerts from your workspace. The benchmark is public."}
-          </p>
-          <button
-            className="auth-google"
-            disabled={busy || !config?.google}
-            onClick={() => {
-              setBusy(true);
-              void beginGoogle().catch(() => {
-                setError(
-                  "Google sign-in needs browser storage and a secure connection. Please try email.",
-                );
-                setBusy(false);
-              });
-            }}
-          >
-            <GoogleMark />
-            Continue with Google
-          </button>
-          {!config?.google && config ? (
-            <p className="auth-provider-note">
-              Google sign-in is awaiting setup. Email access is available below.
+    <div className={`cinematic-page cinematic-auth${reduced ? " motion-off" : ""}`}>
+      <CinematicBackdrop scene="silicon" />
+      <main className={`auth-page${register ? "" : " auth-with-benchmark"}`}>
+        <div className="auth-main">
+          <header>
+            <Brand />
+            <div className="research-nav-actions">
+              {register ? (
+                <a href="/" className="auth-back"><ArrowLeft size={15} /> Back to Sentinel</a>
+              ) : (
+                <a href="#benchmark" className="research-text-link auth-benchmark-link">Detection Lab <ArrowRight size={14} /></a>
+              )}
+              <MotionToggle />
+            </div>
+          </header>
+          <section className="auth-form-wrap">
+            <h1>{register ? "Create your workspace." : "Sign in to Sentinel."}</h1>
+            <p className="auth-intro">
+              {register
+                ? "Create your private workspace, then start your live lab in one click."
+                : "Sign in to see live flows and alerts from your workspace. The benchmark is public."}
             </p>
-          ) : null}
-          {configError ? (
-            <p className="auth-provider-note" role="status">
-              Unable to check Google availability. Email sign-in can still be
-              attempted.
-            </p>
-          ) : null}
-          <div className="auth-divider">
-            <span />
-            {register ? "OR CREATE WITH EMAIL" : "OR SIGN IN WITH EMAIL"}
-            <span />
-          </div>
-          <form onSubmit={submit} className="auth-form">
-            {register ? (
-              <label htmlFor="full-name">
-                Your name
-                <input
-                  id="full-name"
-                  autoComplete="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  minLength={2}
-                  maxLength={80}
-                  placeholder="How should we call you?"
-                  disabled={busy}
-                />
-              </label>
+            <button
+              className="auth-google"
+              disabled={busy || !config?.google}
+              onClick={() => {
+                setBusy(true);
+                void beginGoogle().catch(() => {
+                  setError(
+                    "Google sign-in needs browser storage and a secure connection. Please try email.",
+                  );
+                  setBusy(false);
+                });
+              }}
+            >
+              <GoogleMark />
+              Continue with Google
+            </button>
+            {!config?.google && config ? (
+              <p className="auth-provider-note">
+                Google sign-in is awaiting setup. Email access is available below.
+              </p>
             ) : null}
-            <label htmlFor="auth-email">
-              Email address
-              <input
-                id="auth-email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                maxLength={254}
-                placeholder="you@example.com"
-                disabled={busy}
-              />
-            </label>
-            <label htmlFor="auth-password">
-              Password
-              <div className="auth-password">
-                <input
-                  id="auth-password"
-                  type={visible ? "text" : "password"}
-                  autoComplete={register ? "new-password" : "current-password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={register ? 14 : 1}
-                  maxLength={256}
-                  placeholder={
-                    register ? "At least 14 characters" : "Enter your password"
-                  }
-                  disabled={busy}
-                />
-                <button
-                  type="button"
-                  aria-label={visible ? "Hide password" : "Show password"}
-                  aria-pressed={visible}
-                  onClick={() => setVisible(!visible)}
-                >
-                  {visible ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-            </label>
-            {register ? (
-              <>
-                <p className="auth-password-hint">
-                  Use a unique passphrase of at least 14 characters.
-                </p>
-                <label htmlFor="auth-confirm">
-                  Confirm password
+            {configError ? (
+              <p className="auth-provider-note" role="status">
+                Unable to check Google availability. Email sign-in can still be
+                attempted.
+              </p>
+            ) : null}
+            <div className="auth-divider">
+              <span />
+              {register ? "OR CREATE WITH EMAIL" : "OR SIGN IN WITH EMAIL"}
+              <span />
+            </div>
+            <form onSubmit={submit} className="auth-form">
+              {register ? (
+                <label htmlFor="full-name">
+                  Your name
                   <input
-                    id="auth-confirm"
-                    type={visible ? "text" : "password"}
-                    autoComplete="new-password"
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
+                    id="full-name"
+                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     required
-                    minLength={14}
-                    maxLength={256}
-                    placeholder="Enter your password again"
+                    minLength={2}
+                    maxLength={80}
+                    placeholder="How should we call you?"
                     disabled={busy}
                   />
                 </label>
-              </>
-            ) : null}
-            {error ? (
-              <p className="auth-error" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <button
-              className="lp-button auth-submit"
-              disabled={busy || (register && config?.registration === false)}
-            >
-              {busy ? <LoaderCircle size={18} className="spin" /> : null}
-              {busy
-                ? "Connecting securely…"
-                : register
-                  ? "Create account"
-                  : "Sign in"}
-              {!busy ? <ArrowRight size={17} /> : null}
-            </button>
-            {register && config?.registration === false ? (
-              <p role="status" className="auth-error">
-                Registration is currently closed. Contact your administrator.
-              </p>
-            ) : null}
-          </form>
-          <p className="auth-switch">
-            {register ? "Already have an account?" : "New to Sentinel?"}{" "}
-            <a href={register ? "/auth/sign-in" : "/auth/register"}>
-              {register ? "Sign in" : "Create an account"}
-              <ArrowUpRightIcon />
-            </a>
-          </p>
-          <p className="auth-privacy">
-            <LockKeyhole size={12} />
-            {register
-              ? "Your workspace starts empty. Start your live lab to see real measurements."
-              : "Your session is private to this browser tab."}{" "}
-            <a href="/privacy">Privacy details</a>
-          </p>
-        </section>
-      </div>
-      {register ? (
-        <aside className="auth-register-reference benchmark-embed">
-          <BenchmarkReference action={<a href="/auth/sign-in#benchmark" className="research-button ghost">Open Detection Lab <ArrowRight size={16} /></a>} />
-        </aside>
-      ) : <DetectionLab placement="sign-in" />}
-    </main>
+              ) : null}
+              <label htmlFor="auth-email">
+                Email address
+                <input
+                  id="auth-email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  maxLength={254}
+                  placeholder="you@example.com"
+                  disabled={busy}
+                />
+              </label>
+              <label htmlFor="auth-password">
+                Password
+                <div className="auth-password">
+                  <input
+                    id="auth-password"
+                    type={visible ? "text" : "password"}
+                    autoComplete={register ? "new-password" : "current-password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={register ? 14 : 1}
+                    maxLength={256}
+                    placeholder={
+                      register ? "At least 14 characters" : "Enter your password"
+                    }
+                    disabled={busy}
+                  />
+                  <button
+                    type="button"
+                    aria-label={visible ? "Hide password" : "Show password"}
+                    aria-pressed={visible}
+                    onClick={() => setVisible(!visible)}
+                  >
+                    {visible ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+              </label>
+              {register ? (
+                <>
+                  <p className="auth-password-hint">
+                    Use a unique passphrase of at least 14 characters.
+                  </p>
+                  <label htmlFor="auth-confirm">
+                    Confirm password
+                    <input
+                      id="auth-confirm"
+                      type={visible ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={confirm}
+                      onChange={(e) => setConfirm(e.target.value)}
+                      required
+                      minLength={14}
+                      maxLength={256}
+                      placeholder="Enter your password again"
+                      disabled={busy}
+                    />
+                  </label>
+                </>
+              ) : null}
+              {error ? (
+                <p className="auth-error" role="alert">
+                  {error}
+                </p>
+              ) : null}
+              <button
+                className="lp-button auth-submit"
+                disabled={busy || (register && config?.registration === false)}
+              >
+                {busy ? <LoaderCircle size={18} className="spin" /> : null}
+                {busy
+                  ? "Connecting securely…"
+                  : register
+                    ? "Create account"
+                    : "Sign in"}
+                {!busy ? <ArrowRight size={17} /> : null}
+              </button>
+              {register && config?.registration === false ? (
+                <p role="status" className="auth-error">
+                  Registration is currently closed. Contact your administrator.
+                </p>
+              ) : null}
+            </form>
+            <p className="auth-switch">
+              {register ? "Already have an account?" : "New to Sentinel?"}{" "}
+              <a href={register ? "/auth/sign-in" : "/auth/register"}>
+                {register ? "Sign in" : "Create an account"}
+                <ArrowUpRightIcon />
+              </a>
+            </p>
+            <p className="auth-privacy">
+              <LockKeyhole size={12} />
+              {register
+                ? "Your workspace starts empty. Start your live lab to see real measurements."
+                : "Your session is private to this browser tab."}{" "}
+              <a href="/privacy">Privacy details</a>
+            </p>
+          </section>
+        </div>
+        {register ? (
+          <CinematicChapter scene="rack" className="auth-register-reference benchmark-embed">
+            <BenchmarkReference action={<a href="/auth/sign-in#benchmark" className="research-button ghost">Open Detection Lab <ArrowRight size={16} /></a>} />
+          </CinematicChapter>
+        ) : <DetectionLab placement="sign-in" />}
+      </main>
+    </div>
   );
 }
 function ArrowUpRightIcon() {

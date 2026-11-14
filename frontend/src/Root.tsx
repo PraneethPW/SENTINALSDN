@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import Landing from "./Landing";
 import { Brand } from "./components/PublicHeader";
+import { CinematicBackdrop, MotionToggle } from "./components/CinematicScene";
+import { useMotionPreference } from "./motionPreference";
 import AuthPortal from "./AuthPortal";
 import type { AuthResult } from "./AuthPortal";
 import { request } from "./api";
@@ -82,9 +84,11 @@ function Callback() {
   );
 }
 function EntryShell({ children }: { children: React.ReactNode }) {
+  const { reduced } = useMotionPreference();
   return (
-    <main className="entry-page">
-      <Brand />
+    <main className={`entry-page cinematic-page cinematic-entry${reduced ? " motion-off" : ""}`}>
+      <CinematicBackdrop scene="silicon" />
+      <div className="entry-page-header"><Brand /><MotionToggle /></div>
       <div className="entry-card">{children}</div>
       <a className="lp-text-link" href="/">
         <ArrowLeft size={15} />
@@ -225,9 +229,11 @@ function WorkspaceGate() {
   );
 }
 function Privacy() {
+  const { reduced } = useMotionPreference();
   return (
-    <main className="privacy-page lp-wrap">
-      <Brand />
+    <main className={`privacy-page lp-wrap cinematic-page cinematic-entry${reduced ? " motion-off" : ""}`}>
+      <CinematicBackdrop scene="fiber" />
+      <div className="entry-page-header"><Brand /><MotionToggle /></div>
       <p className="lp-kicker">PRIVACY / 1 NOVEMBER 2026</p>
       <h1>
         Your data.

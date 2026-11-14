@@ -1,0 +1,281 @@
+.cinematic-page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  background: #080c12;
+}
+
+.cinematic-backdrop, .chapter-scene {
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: #080d13;
+}
+
+.cinematic-backdrop {
+  position: fixed;
+  inset: 0;
+}
+
+.scene-frame {
+  position: absolute;
+  inset: -15% -4%;
+  transform-origin: center;
+}
+
+.scene-image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: 72% center;
+}
+
+.cinematic-backdrop::after, .chapter-scene::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.cinematic-backdrop::after {
+  background: linear-gradient(95deg, #080c12ed 0%, #080c12bb 31%, #080c1255 71%, #080c1255 100%),
+              linear-gradient(0deg, #080c12ef, #080c1200 63%);
+}
+
+.cinematic-auth .cinematic-backdrop::after {
+  background: linear-gradient(95deg, #071017c9 6%, #07101785 58%, #07101722),
+              linear-gradient(0deg, #080c12eb, #080c1222 60%);
+}
+
+.app-shell .cinematic-backdrop::after {
+  background: linear-gradient(95deg, #090f16ea 15%, #090f16ba 46%, #090f166b),
+              linear-gradient(0deg, #090f16e8, #090f1622 65%);
+}
+
+.cinematic-progress {
+  height: 3px;
+  background: linear-gradient(90deg, #56dec8, #dff966);
+}
+
+.cinematic-chapter {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid #6e8a8e63;
+  border-radius: 10px;
+}
+
+.chapter-scene {
+  position: absolute;
+  inset: 0;
+}
+
+.chapter-scene::after {
+  background: linear-gradient(95deg, #0a1019ef 3%, #0a1019b9 53%, #0a10193b),
+              linear-gradient(0deg, #0a1019ba, #0a101911 66%);
+}
+
+.chapter-content { min-width: 0; }
+
+.research-nav-actions, .entry-page-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.research-motion-toggle {
+  display: grid;
+  width: 37px;
+  height: 37px;
+  border: 1px solid #8d9fa45c;
+  border-radius: 6px;
+  place-items: center;
+  background: #111b24d9;
+  color: var(--research-text);
+}
+
+.research-motion-toggle:hover {
+  border-color: var(--research-accent);
+  color: var(--research-accent);
+}
+
+.cinematic-page .research-header {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  background: #0b1017f2;
+}
+
+.cinematic-page .project-overview {
+  min-height: clamp(570px, 75svh, 860px);
+  padding-block: clamp(36px, 6vw, 90px);
+  border: 0;
+}
+
+.project-intro h1 { text-shadow: 0 3px 22px #0009; }
+.project-description, .project-label, .project-spec dt { color: #d7e1e5; }
+
+.cinematic-page .landing-reference .reference-panel {
+  border-color: #90b3b563;
+  background: #101821ed;
+  box-shadow: 0 28px 60px #0008;
+}
+
+.project-scroll-link { padding-block: 0 24px; }
+.project-scroll-link a { color: #ddf6ef; }
+.project-scroll-link a:hover { color: var(--research-accent); }
+
+.method-chapter, .workspace-chapter {
+  display: grid;
+  align-content: center;
+  min-height: 365px;
+  padding: clamp(24px, 4.3vw, 60px);
+  margin-bottom: clamp(16px, 3vw, 30px);
+  scroll-margin-top: 90px;
+}
+
+.method-chapter .chapter-scene::after {
+  background: linear-gradient(90deg, #0a1019eb, #0a1019a1 55%, #0a101941),
+              linear-gradient(0deg, #0a1019cb, #0a101911 58%);
+}
+
+.method-chapter .method-steps li {
+  padding: 16px;
+  border: 1px solid #95aeb44f;
+  border-radius: 7px;
+  background: #111a24eb;
+}
+
+.workspace-chapter { min-height: clamp(280px, 42svh, 465px); }
+.live-chapter-copy { max-width: 440px; }
+.live-chapter-copy h2 { font: 700 clamp(28px, 4vw, 52px)/1.05 var(--research-heading); letter-spacing: -.045em; }
+.live-chapter-copy p { margin: 12px 0 19px; color: #d8e3e8; line-height: 1.65; }
+.research-footer { border-top: 1px solid #91a4ae47; }
+
+.cinematic-auth > .auth-page, .cinematic-entry { background: transparent; }
+.cinematic-auth > .auth-page:not(.auth-with-benchmark) {
+  width: min(calc(100% - 48px), 1400px);
+  margin-inline: auto;
+  gap: 22px;
+  padding-block: clamp(20px, 5vw, 70px);
+}
+
+.cinematic-auth .auth-main {
+  background: #111820f5;
+  border: 1px solid #88a5ab4d;
+  border-radius: 9px;
+  min-width: 0;
+}
+
+.cinematic-auth .auth-register-reference {
+  padding: clamp(16px, 3vw, 48px);
+}
+
+.cinematic-auth .lab-intro {
+  background: linear-gradient(100deg, #101923f7, #101923b8 81%, #10192355);
+  border-color: #88a5ab5c;
+}
+
+.cinematic-auth .lab-intro .reference-panel {
+  background: #0a141eec;
+  border-color: #88a5ab54;
+}
+
+.cinematic-auth .lab-intro-main > p:not(.bench-error),
+.cinematic-auth .reference-foot p,
+.dataset-upload.cinematic-chapter p {
+  color: #cbd8e1;
+}
+
+.dataset-upload.cinematic-chapter {
+  min-height: 330px;
+  display: grid;
+  align-content: center;
+}
+
+.dataset-upload.cinematic-chapter .chapter-content { max-width: 700px; }
+.dataset-upload.cinematic-chapter .chapter-scene::after {
+  background: linear-gradient(94deg, #0c121beb, #0c121bbc 54%, #0c121b31),
+              linear-gradient(0deg, #0c121bd9, #0c121b22 64%);
+}
+
+.benchmark-results.cinematic-chapter {
+  padding: clamp(12px, 2vw, 25px);
+  background: #0c121b;
+}
+.benchmark-results .chapter-scene::after {
+  background: linear-gradient(90deg, #0c121be3, #0c121b95 63%, #0c121b78),
+              linear-gradient(0deg, #0c121bcb, transparent);
+}
+.benchmark-results .bench-panel { background: #151e29f7; }
+.bench-footer p { color: #cbd8e1; }
+.cinematic-entry .entry-card, .cinematic-entry > section, .cinematic-entry > h1, .cinematic-entry > .lp-kicker {
+  width: min(100%, 750px);
+  text-shadow: 0 2px 9px #000;
+}
+.cinematic-entry .entry-card, .cinematic-entry > section {
+  background: #111a23f0;
+  border: 1px solid #8eafb155;
+  border-radius: 8px;
+  padding: clamp(17px, 4vw, 40px);
+}
+.cinematic-entry > .entry-page-header { margin-bottom: 22px; }
+
+.app-shell.cinematic-page .sidebar, .app-shell.cinematic-page .topbar {
+  background: #101720f5;
+}
+.app-shell.cinematic-page .page-heading {
+  min-height: 145px;
+  align-items: end;
+  padding: clamp(16px, 3vw, 33px);
+  border: 1px solid #8aa5ad54;
+  border-radius: 9px;
+  background: linear-gradient(93deg, #101821f2, #101821a6 63%, #10182144);
+}
+.cinematic-page .page-heading p { color: #d6e0e6; }
+.cinematic-page .workspace-source { background: #151e28f5; }
+.cinematic-page .telemetry-heading .eyebrow { color: #e3f6f1; }
+.app-shell.cinematic-page :is(.panel, .metric-card) { background: #151d27f7; }
+
+@media (max-width: 850px) {
+  .cinematic-page .project-overview { min-height: auto; gap: 22px; }
+  .cinematic-page .project-intro { min-height: min(475px, 63svh); align-content: center; }
+  .cinematic-page .cinematic-backdrop::after {
+    background: linear-gradient(95deg, #080c12e0, #080c1298 68%, #080c1276),
+                linear-gradient(0deg, #080c12e7, transparent 68%);
+  }
+  .cinematic-auth .lab-intro { background: #101923e6; }
+  .method-chapter .method-steps { gap: 9px; }
+  .cinematic-auth > .auth-page:not(.auth-with-benchmark) { width: calc(100% - 24px); }
+}
+
+@media (max-width: 560px) {
+  .cinematic-page .research-nav { gap: 5px; }
+  .cinematic-page .research-nav nav { display: none; }
+  .cinematic-page .research-nav-actions { gap: 5px; }
+  .research-motion-toggle { width: 36px; height: 36px; }
+  .cinematic-page .project-overview { padding-block: 18px; }
+  .cinematic-page .project-intro { min-height: 440px; }
+  .scene-image { object-position: 68% center; }
+  .method-chapter, .workspace-chapter { padding: 18px; }
+  .dataset-upload.cinematic-chapter .chapter-scene::after { background: #0c121bd1; }
+  .app-shell.cinematic-page .page-heading { min-height: 128px; align-items: start; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .cinematic-page:not(.motion-off) .cinematic-chapter .chapter-content {
+      animation: chapter-enter linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 65%;
+    }
+    .cinematic-chapter:focus-within .chapter-content { animation: none !important; }
+  }
+}
+@keyframes chapter-enter {
+  from { opacity: .75; transform: translateY(22px); }
+  to { opacity: 1; transform: translateY(0); }
+}

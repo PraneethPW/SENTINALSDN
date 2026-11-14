@@ -8,6 +8,7 @@ import { calculateMetrics, exportCohort, number, outcomeInfo, outcomeOf, percent
 import type { BenchmarkRun, BenchmarkWindow, Outcome } from "./benchmark";
 import BenchmarkChart from "./components/BenchmarkChart";
 import BenchmarkReference from "./components/BenchmarkReference";
+import { CinematicChapter } from "./components/CinematicScene";
 
 const perPage = 12;
 const outcomes: Outcome[] = ["tp", "fn", "fp", "tn"];
@@ -312,7 +313,7 @@ export default function DetectionLab({ placement }: { placement: "sign-in" | "wo
           <BenchmarkReference layout="compact" />
         </div>
       </section>
-      <section className="bench-panel dataset-upload" id="upload-dataset" aria-labelledby={uploadId}>
+      <CinematicChapter scene="fiber" className="bench-panel dataset-upload" id="upload-dataset" labelledBy={uploadId}>
           <h2 id={uploadId} tabIndex={-1}>Evaluate your own CSV</h2>
           <p>Up to 5,000 flow windows and 1 MB. Include a label column for precision, recall, and error counts. All rows receive a model score.</p>
           <form onSubmit={(event) => {
@@ -339,10 +340,10 @@ export default function DetectionLab({ placement }: { placement: "sign-in" | "wo
           </details>
           <p className="dataset-privacy">Files are processed by the detector in memory. Include only flow features and labels.</p>
           {error?.source === "upload" ? <p className="bench-error" role="alert"><CircleAlert size={18} />{error.message}</p> : null}
-      </section>
+      </CinematicChapter>
       <p className="research-sr-only" role="status">{status}</p>
       {run ? (
-        <section className="benchmark-results" aria-labelledby={resultsId}>
+        <CinematicChapter scene="silicon" className="benchmark-results" labelledBy={resultsId}>
           <div className="research-section-title benchmark-results-title">
             <h2 id={resultsId} ref={resultsHeading} tabIndex={-1}>{published ? "Benchmark results" : "Your dataset results"}</h2>
             {published ? <a className="research-text-link" href={published.source.url}>Published Mininet dataset <ArrowUpRight size={15} /></a> : null}
@@ -352,7 +353,7 @@ export default function DetectionLab({ placement }: { placement: "sign-in" | "wo
             <p>{published ? "Results describe this published test partition. Network-specific accuracy requires separate labeled windows." : "Metrics use labels supplied in your CSV. Unlabeled windows receive scores and verdicts."}</p>
             <a className="research-text-link" href="/#methodology">Methodology <ArrowRight size={15} /></a>
           </footer>
-        </section>
+        </CinematicChapter>
       ) : null}
     </div>
   );

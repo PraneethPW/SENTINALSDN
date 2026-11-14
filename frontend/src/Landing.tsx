@@ -1,7 +1,9 @@
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
 import PublicHeader, { Brand } from "./components/PublicHeader";
 import { readSession } from "./session";
 import BenchmarkReference from "./components/BenchmarkReference";
+import { CinematicBackdrop, CinematicChapter } from "./components/CinematicScene";
+import { useMotionPreference } from "./motionPreference";
 
 const method = [
   ["Capture", "OpenFlow switch counters", "The collector calculates packet and byte deltas from 30-second measurements."],
@@ -10,8 +12,10 @@ const method = [
 ];
 
 export default function Landing() {
+  const { reduced } = useMotionPreference();
   return (
-    <div className="research">
+    <div className={`research cinematic-page${reduced ? " motion-off" : ""}`}>
+      <CinematicBackdrop scene="fiber" />
       <PublicHeader />
       <main className="research-width research-main">
         <div className="project-overview">
@@ -35,9 +39,12 @@ export default function Landing() {
             <BenchmarkReference />
           </div>
         </div>
-        <section className="research-method" id="methodology" aria-labelledby="method-title">
+        <div className="project-scroll-link">
+          <a className="research-text-link" href="#methodology"><ArrowDown size={15} /> How the detector works</a>
+        </div>
+        <CinematicChapter scene="silicon" className="method-chapter" id="methodology" labelledBy="method-title">
           <div className="research-section-title">
-            <h2 id="method-title">How the detector works</h2>
+            <h2 id="method-title">From switch counters to a model verdict</h2>
             <a href="https://github.com/PraneethPW/SENTINALSDN" className="research-text-link">Source code <ArrowUpRight size={15} /></a>
           </div>
           <ol className="method-steps">
@@ -45,11 +52,14 @@ export default function Landing() {
               <li key={step}><span>{step}</span><h3>{name}</h3><p>{detail}</p></li>
             ))}
           </ol>
-        </section>
-        <section className="research-live">
-          <div><h2>Live OpenFlow workspace</h2><p>Start a private Mininet lab or connect a collector to inspect real switch counters and recorded verdicts.</p></div>
-          <a href={readSession() ? "/app" : "/auth/sign-in"} className="research-button ghost">Open workspace <ArrowUpRight size={15} /></a>
-        </section>
+        </CinematicChapter>
+        <CinematicChapter scene="rack" className="workspace-chapter" labelledBy="live-workspace-title">
+          <div className="live-chapter-copy">
+            <h2 id="live-workspace-title">Live OpenFlow workspace</h2>
+            <p>Start a private Mininet lab or connect a collector to inspect real switch counters and recorded verdicts.</p>
+            <a href={readSession() ? "/app" : "/auth/sign-in"} className="research-button ghost">Open workspace <ArrowUpRight size={15} /></a>
+          </div>
+        </CinematicChapter>
       </main>
       <footer className="research-width research-footer"><Brand /><a href="/privacy">Privacy</a></footer>
     </div>

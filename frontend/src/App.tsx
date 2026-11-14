@@ -3,8 +3,6 @@ import type { FormEvent, ReactNode } from "react";
 import {
   AnimatePresence,
   motion,
-  useReducedMotion,
-  useScroll,
 } from "framer-motion";
 import {
   Activity,
@@ -46,6 +44,8 @@ import type { Flow, Incident, User } from "./api";
 import FlowEvidence from "./components/FlowEvidence";
 import DetectionLab from "./DetectionLab";
 import BenchmarkReference from "./components/BenchmarkReference";
+import { CinematicBackdrop, MotionToggle } from "./components/CinematicScene";
+import { useMotionPreference } from "./motionPreference";
 import { useNetwork } from "./useNetwork";
 import { WorkspaceControls, FlowHistory } from "./components/WorkspaceControls";
 import { Topology, TrafficChart } from "./components/Charts";
@@ -94,7 +94,7 @@ function Modal({
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const reduced = useReducedMotion();
+  const { reduced } = useMotionPreference();
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => {
@@ -227,15 +227,7 @@ export default function App() {
   const [minutes, setMinutes] = useState(15);
   const network = useNetwork(minutes);
   const { data, user, token, connection, error, signingOut } = network;
-  const systemReduced = useReducedMotion();
-  const [motionOff, setMotionOff] = useState(() => {
-    try {
-      return localStorage.getItem("sentinel.motion-off") === "true";
-    } catch {
-      return false;
-    }
-  });
-  const reduced = !!systemReduced || motionOff;
+  const { reduced, toggle: toggleMotion } = useMotionPreference();
   const [loginOpen, setLoginOpen] = useState(false),
     [guideOpen, setGuideOpen] = useState(false),
     [mobileNav, setMobileNav] = useState(false);
@@ -281,7 +273,6 @@ export default function App() {
       incident_id: string;
     }[]
   >([]);
-  const { scrollYProgress: pageProgress } = useScroll();
   const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null);
   const openIncidents =
     data?.summary.open_incidents ??
@@ -535,12 +526,8 @@ export default function App() {
   );
 
   return (
-    <div className={`app-shell ${reduced ? "motion-off" : ""}`}>
-      <motion.div
-        className="scroll-progress"
-        aria-hidden="true"
-        style={{ scaleX: reduced ? 0 : pageProgress }}
-      />
+    <div className={`app-shell cinematic-page${reduced ? " motion-off" : ""}`}>
+      <CinematicBackdrop scene="rack" />
       <a href="#main" className="skip-link">
         Skip to content
       </a>
@@ -669,28 +656,7 @@ export default function App() {
                     : "Workspace offline"}
             </span>
             <span className="topbar-divider" />
-            <button
-              className="icon-button motion-toggle"
-              onClick={() => {
-                try {
-                  localStorage.setItem(
-                    "sentinel.motion-off",
-                    String(!motionOff),
-                  );
-                } catch {
-                  /* Keep the preference in memory when storage is unavailable. */
-                }
-                setMotionOff(!motionOff);
-              }}
-              aria-label={
-                reduced
-                  ? "Enable motion (respects system preferences)"
-                  : "Pause motion"
-              }
-              aria-pressed={motionOff}
-            >
-              {reduced ? <Pause size={16} /> : <Activity size={16} />}
-            </button>
+            <MotionToggle className="icon-button motion-toggle" />
             <button
               className="icon-button notification-button"
               aria-label={`Open incidents, ${openIncidents} unresolved`}
@@ -840,10 +806,10 @@ export default function App() {
           <AnimatePresence mode="wait">
             <motion.div
               key={section}
-              initial={{ opacity: 0, y: reduced ? 0 : 12 }}
+              initial={reduced ? false : { opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: reduced ? 0 : 0.3 }}
             >
               {section === "setup" && token && user && data ? (
                 <NetworkSetup
@@ -1663,17 +1629,7 @@ export default function App() {
                         <label>Motion preference</label>
                         <button
                           className="button secondary"
-                          onClick={() => {
-                            setMotionOff(!motionOff);
-                            try {
-                              localStorage.setItem(
-                                "sentinel.motion-off",
-                                String(!motionOff),
-                              );
-                            } catch {
-                              /* In-memory preference remains available. */
-                            }
-                          }}
+                          onClick={toggleMotion}
                         >
                           {reduced ? (
                             <Pause size={15} />

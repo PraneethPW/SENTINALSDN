@@ -41,42 +41,36 @@ export default function BenchmarkReference({
     <section className={`reference-panel reference-${layout}`} aria-label="Published benchmark">
       <div className="reference-heading">
         <div>
-          <p className="research-eyebrow">PUBLISHED BENCHMARK</p>
-          <h2>{layout === "full" ? "How the detector scored." : "Reference results"}</h2>
+          <h2>Published benchmark</h2>
+          {ready ? <p>{number(reference.dataset.rows)} test windows · {reference.dataset.groups} held-out groups</p> : null}
         </div>
         {action}
       </div>
       {ready ? (
         <>
-          <ul className="reference-metrics">
-            <li><strong>{number(reference.dataset.rows)}</strong><span>Test windows</span></li>
-            <li><strong>{percent(precision)}</strong><span>Attack precision</span></li>
-            <li><strong>{percent(recall)}</strong><span>Attack recall</span></li>
-            <li><strong>{percent(falsePositiveRate)}</strong><span>False-positive rate</span></li>
-          </ul>
+          <dl className="reference-metrics">
+            <div><dt>Attack precision</dt><dd>{percent(precision)}</dd></div>
+            <div><dt>Attack recall</dt><dd>{percent(recall)}</dd></div>
+            <div><dt>False-positive rate</dt><dd>{percent(falsePositiveRate)}</dd></div>
+          </dl>
           {layout === "full" ? (
-            <div className="reference-details">
-              <div>
-                <h3>Attack-labeled windows</h3>
-                <p><strong>{number(tp)} detected</strong><span>{number(fn)} missed</span></p>
-                <div className="reference-bar" aria-hidden="true"><i style={{ width: percent(recall) }} /></div>
-              </div>
-              <div>
-                <h3>Benign-labeled windows</h3>
-                <p><strong>{number(tn)} accepted</strong><span>{number(fp)} flagged</span></p>
-                <div className="reference-bar" aria-hidden="true"><i style={{ width: percent(tn / (tn + fp)) }} /></div>
-              </div>
-            </div>
+            <table className="reference-matrix">
+              <caption>Decisions at the {percent(reference.model.threshold)} threshold</caption>
+              <thead><tr><th scope="col">Actual label</th><th scope="col">Flagged</th><th scope="col">Passed</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Attack</th><td>{number(tp)}</td><td><a href="/auth/sign-in?outcome=fn#benchmark">{number(fn)} missed <ArrowUpRight size={13} /></a></td></tr>
+                <tr><th scope="row">Benign</th><td><a href="/auth/sign-in?outcome=fp#benchmark">{number(fp)} false alarms <ArrowUpRight size={13} /></a></td><td>{number(tn)}</td></tr>
+              </tbody>
+            </table>
           ) : null}
           <div className="reference-foot">
-            <p>{reference.model.algorithm} · {reference.dataset.groups} held-out groups · {percent(reference.model.threshold)} reference threshold</p>
+            <p>{reference.model.algorithm} · {layout === "compact" ? `${percent(reference.model.threshold)} threshold` : "Published Mininet flows"}</p>
             <a className="research-text-link" href={reference.dataset.source.url}>Dataset source <ArrowUpRight size={14} /></a>
           </div>
-          {layout === "full" ? <p className="reference-limits">These results describe published Mininet captures. Evaluate labeled windows from your own network to measure performance there.</p> : null}
         </>
       ) : (
         <p className="reference-limits" role="status">
-          {failed ? "Reference results are temporarily unavailable." : "Loading the verified model’s reference results…"}
+          {failed ? "Benchmark figures are unavailable." : "Loading saved benchmark figures…"}
         </p>
       )}
     </section>

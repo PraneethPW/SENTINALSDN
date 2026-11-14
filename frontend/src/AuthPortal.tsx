@@ -13,6 +13,7 @@ import type { User } from "./api";
 import { writeSession } from "./session";
 import { Brand } from "./components/PublicHeader";
 import DetectionLab from "./DetectionLab";
+import BenchmarkReference from "./components/BenchmarkReference";
 export type AuthResult = { token: string; user: User };
 const messages: Record<string, string> = {
   google_cancelled: "Google sign-in was cancelled. You can try again.",
@@ -151,7 +152,7 @@ export default function AuthPortal({
           <p className="auth-intro">
             {register
               ? "Create your private workspace, then start your live lab in one click."
-              : "Sign in to your Sentinel account and continue where you left off."}
+              : "Sign in to see live flows and alerts from your workspace. The benchmark is public."}
           </p>
           <button
             className="auth-google"
@@ -305,11 +306,8 @@ export default function AuthPortal({
         </section>
       </div>
       {register ? (
-        <aside className="auth-art">
-          <p className="lp-kicker">LIVE SDN WORKSPACE</p>
-          <h2>Network evidence<br /><em>in real time.</em></h2>
-          <p>Inspect flow measurements, OpenFlow topology and detector verdicts in your private workspace.</p>
-          <a href="/auth/sign-in#benchmark" className="research-button ghost">Open Detection Lab <ArrowRight size={16} /></a>
+        <aside className="auth-register-reference benchmark-embed">
+          <BenchmarkReference action={<a href="/auth/sign-in#benchmark" className="research-button ghost">Open Detection Lab <ArrowRight size={16} /></a>} />
         </aside>
       ) : <DetectionLab placement="sign-in" />}
     </main>

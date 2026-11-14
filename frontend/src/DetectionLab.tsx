@@ -36,12 +36,12 @@ function WindowInspector({ row, threshold }: { row: BenchmarkWindow; threshold: 
   );
 }
 
-function Results({ run }: { run: BenchmarkRun }) {
+function Results({ run, initialOutcome }: { run: BenchmarkRun; initialOutcome: "all" | Outcome }) {
   const published = run.dataset.kind === "public" ? run.dataset : null;
   const protocolId = useId(), thresholdId = useId(), windowsId = useId();
   const [threshold, setThreshold] = useState(run.model.threshold);
   const [protocol, setProtocol] = useState("all");
-  const [outcome, setOutcome] = useState<"all" | Outcome>("all");
+  const [outcome, setOutcome] = useState<"all" | Outcome>(initialOutcome);
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<number | null>(null);
   const cohort = useMemo(
@@ -289,17 +289,16 @@ export default function DetectionLab({ placement }: { placement: "sign-in" | "wo
   }
 
   const published = run?.dataset.kind === "public" ? run.dataset : null;
+  const requestedOutcome = placement === "sign-in" ? new URLSearchParams(location.search).get("outcome") : null;
+  const initialOutcome = requestedOutcome === "fn" || requestedOutcome === "fp" ? requestedOutcome : "all";
   return (
     <div className={`benchmark-embed benchmark-${placement}`}>
-      <section className="research-hero lab-hero" id="benchmark" aria-labelledby={headingId} tabIndex={-1}>
-        <div className="research-hero-image" />
-        <div className="research-hero-copy">
-          <p className="research-eyebrow"><span /> MODEL EVALUATION</p>
-          <h2 id={headingId}>Detection <em>Lab</em></h2>
-          <p className="research-hero-description">
-            Reproduce the published benchmark or evaluate SDN flow windows from your own network.
-          </p>
-          <div className="lab-hero-actions">
+      <section className="lab-intro" id="benchmark" aria-labelledby={headingId} tabIndex={-1}>
+        <div className="lab-intro-main">
+          <h2 id={headingId}>Detection Lab</h2>
+          <p>Run the installed model on the held-out Mininet test set or score a CSV of your own SDN flow windows.</p>
+          {initialOutcome !== "all" && !run ? <p className="lab-selected-outcome">Run the benchmark to inspect {outcomeInfo[initialOutcome].name.toLowerCase()} windows.</p> : null}
+          <div className="lab-actions-row">
             <button className="research-button primary" type="button"
               onClick={(event) => void start(event.currentTarget)} aria-disabled={!!busy} aria-busy={busy === "public"}>
               {busy === "public" ? <LoaderCircle size={18} className="spin" /> : <Play size={18} />}
@@ -309,15 +308,13 @@ export default function DetectionLab({ placement }: { placement: "sign-in" | "wo
               <Upload size={16} /> Try your dataset
             </button>
           </div>
-          {placement === "sign-in" ? <span className="bench-access-note">No account required</span> : null}
           {error?.source === "public" ? <p className="bench-error" role="alert"><CircleAlert size={18} />{error.message}</p> : null}
           <BenchmarkReference layout="compact" />
         </div>
       </section>
       <section className="bench-panel dataset-upload" id="upload-dataset" aria-labelledby={uploadId}>
-          <p className="research-eyebrow">YOUR NETWORK</p>
           <h2 id={uploadId} tabIndex={-1}>Evaluate your own CSV</h2>
-          <p>Upload up to 5,000 SDN flow windows in a CSV under 1 MB. Add labels to measure accuracy or leave them blank to get scores and verdicts.</p>
+          <p>Up to 5,000 flow windows and 1 MB. Include a label column for precision, recall, and error counts. All rows receive a model score.</p>
           <form onSubmit={(event) => {
             event.preventDefault();
             const submitter = (event.nativeEvent as SubmitEvent).submitter;
@@ -350,7 +347,7 @@ export default function DetectionLab({ placement }: { placement: "sign-in" | "wo
             <h2 id={resultsId} ref={resultsHeading} tabIndex={-1}>{published ? "Benchmark results" : "Your dataset results"}</h2>
             {published ? <a className="research-text-link" href={published.source.url}>Published Mininet dataset <ArrowUpRight size={15} /></a> : null}
           </div>
-          <Results key={run.id} run={run} />
+          <Results key={run.id} run={run} initialOutcome={published ? initialOutcome : "all"} />
           <footer className="bench-footer">
             <p>{published ? "Results describe this published test partition. Network-specific accuracy requires separate labeled windows." : "Metrics use labels supplied in your CSV. Unlabeled windows receive scores and verdicts."}</p>
             <a className="research-text-link" href="/#methodology">Methodology <ArrowRight size={15} /></a>

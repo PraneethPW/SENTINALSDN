@@ -512,7 +512,7 @@ export default function App() {
           title={
             search || filter !== "all"
               ? "No matching flow windows"
-              : "The signal starts here."
+              : "No flow windows"
           }
           text={
             search || filter !== "all"
@@ -855,34 +855,8 @@ export default function App() {
               ) : null}
               {section === "overview" ? (
                 <>
-                  <section className="hero-panel workspace-hero">
-                    <div className="hero-copy">
-                      <p className="workspace-hero-state">
-                        <Radio size={15} /> {liveTelemetry ? "Collector reporting" : "Awaiting a collector"}
-                      </p>
-                      <h2>{liveTelemetry ? "Inspect measured network flows." : "Connect a telemetry source."}</h2>
-                      <p>Follow OpenFlow measurements through the trained DDoS detector as new windows arrive.</p>
-                      <div className="hero-actions">
-                        <button className="button primary" onClick={() => navigate(liveTelemetry ? "traffic" : "setup")}>
-                          {liveTelemetry ? "Inspect live traffic" : "Open network setup"} <ArrowRight size={16} />
-                        </button>
-                        <button className="button secondary" onClick={() => navigate("benchmark")}>
-                          Run the benchmark <ArrowRight size={15} />
-                        </button>
-                      </div>
-                    </div>
-                  </section>
-                  <div className="workspace-reference">
-                    <BenchmarkReference layout="compact" action={
-                      <button className="research-text-link" onClick={() => navigate("benchmark")}>
-                        Run benchmark or upload CSV <ArrowRight size={15} />
-                      </button>
-                    } />
-                  </div>
                   <div className="telemetry-heading" id="telemetry">
-                    <span className="eyebrow">
-                      <Radio size={13} /> NETWORK PULSE
-                    </span>
+                    <span className="eyebrow"><Radio size={13} /> LIVE MEASUREMENTS</span>
                     <span className="muted tiny">
                       {data
                         ? data.summary.last_flow
@@ -892,6 +866,9 @@ export default function App() {
                       <i className="inline-dot" />
                       60-second rate window
                     </span>
+                    <button className="text-button" onClick={() => navigate(liveTelemetry ? "traffic" : "setup")}>
+                      {liveTelemetry ? "Inspect live traffic" : "Open network setup"} <ArrowRight size={14} />
+                    </button>
                   </div>
                   <div className="metrics-grid">
                     {[
@@ -1032,6 +1009,11 @@ export default function App() {
                       />
                       <Topology data={data} />
                     </section>
+                  </div>
+                  <div className="workspace-reference benchmark-embed">
+                    <BenchmarkReference layout="compact" action={
+                      <button className="research-text-link" onClick={() => navigate("benchmark")}>Run benchmark or upload CSV <ArrowRight size={15} /></button>
+                    } />
                   </div>
                   <div className="overview-lower">
                     <section className="panel flows-panel">
@@ -1506,7 +1488,7 @@ export default function App() {
                       action={<Sparkles size={19} className="amber-text" />}
                     />
                     <div className="intelligence-copy">
-                      <h3>Context for the next move.</h3>
+                      <h3>Generate an incident summary</h3>
                       <p>
                         Turn measured incident evidence into a concise
                         investigation brief. AI analysis never changes detection
@@ -1742,7 +1724,7 @@ export default function App() {
                     ) : (
                       <Empty
                         icon={<Eye size={26} strokeWidth={1} />}
-                        title="Actions leave a trace."
+                        title="No activity recorded"
                         text="Sign-ins, incident updates, mitigation requests, and AI analysis are recorded in PostgreSQL."
                       />
                     )}

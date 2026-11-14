@@ -300,34 +300,6 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.auth-art {
-  position: relative;
-  overflow: hidden;
-  min-height: 100%;
-  background:
-    radial-gradient(ellipse at 25% 25%, #9c935b18, transparent 70%),
-    linear-gradient(140deg, #242b1d, #171e14);
-  border-left: 1px solid #aeb78d22;
-  padding: clamp(50px, 7vw, 100px) clamp(35px, 5vw, 80px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  isolation: isolate;
-}
-.auth-art > h2 {
-  font-size: clamp(38px, 4.5vw, 65px);
-  font-weight: 450;
-  line-height: 1.15;
-  letter-spacing: -2.2px;
-  margin: 23px 0;
-}
-.auth-art > p {
-  max-width: 275px;
-  color: #a6b093;
-  font-size: 12px;
-  line-height: 1.9;
-}
 .entry-page {
   min-height: 100svh;
   padding: 40px 6vw;
@@ -450,19 +422,10 @@
   .auth-form-wrap {
     margin-top: 60px;
   }
-  .auth-art {
-    padding-inline: 45px;
-  }
-  .auth-art > h2 {
-    font-size: 48px;
-  }
 }
 @media (max-width: 850px) {
   .auth-page {
     grid-template-columns: 1fr;
-  }
-  .auth-art {
-    display: none;
   }
   .auth-main {
     min-height: 100svh;

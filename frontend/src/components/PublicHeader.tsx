@@ -10,13 +10,13 @@ export function Brand() {
   );
 }
 
-export default function PublicHeader({ lab = false }: { lab?: boolean }) {
+export default function PublicHeader() {
   return (
     <header className="research-header">
       <div className="research-width research-nav">
         <Brand />
         <nav aria-label="Project navigation">
-          <a href="/lab" aria-current={lab ? "page" : undefined}>Detection Lab</a>
+          <a href="/auth/sign-in#benchmark">Detection Lab</a>
           <a href="/#methodology">Methodology</a>
         </nav>
         <a className="research-button ghost" href={readSession() ? "/app" : "/auth/sign-in"}>

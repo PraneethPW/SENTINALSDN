@@ -300,20 +300,6 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.auth-main > footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-  font:
-    6px "IBM Plex Mono",
-    monospace;
-  letter-spacing: 1.3px;
-  color: #78856a;
-  margin-top: auto;
-  padding-top: 20px;
-  border-top: 1px solid var(--lp-line);
-}
 .auth-art {
   position: relative;
   overflow: hidden;
@@ -494,11 +480,6 @@
     max-width: 390px;
     margin: 55px auto;
   }
-  .auth-main > footer {
-    width: 100%;
-    max-width: 550px;
-    margin: 0 auto;
-  }
 }
 @media (max-width: 600px) {
   .lp-brand {
@@ -548,10 +529,6 @@
   }
   .auth-form {
     gap: 18px;
-  }
-  .auth-main > footer {
-    font-size: 5px;
-    letter-spacing: 0.8px;
   }
   .entry-page {
     padding: 27px 25px;

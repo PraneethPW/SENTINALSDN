@@ -29,6 +29,34 @@ describe("public account entry", () => {
       screen.getByRole("link", { name: "Sign in" }).getAttribute("href"),
     ).toBe("/auth/sign-in");
   });
+  it("runs the benchmark from sign-in and displays evidence beside the form", async () => {
+    call.mockImplementation((url) =>
+      Promise.resolve(
+        url === "/api/benchmark/run"
+          ? {
+              id: "run",
+              completed_at: "2026-11-14T12:00:00Z",
+              inference_ms: 12,
+              model: { algorithm: "Extra Trees", threshold: 0.525, version: "test" },
+              dataset: {
+                rows: 1, groups: 1, split: "test",
+                source: { authors: [], url: "https://example.test", title: "Test dataset" },
+              },
+              windows: [[42, 1, 0.48, 30, 512, 17, 30, 6]],
+            }
+          : { registration: true, google: false },
+      ),
+    );
+    render(<AuthPortal />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Run benchmark" }));
+
+    await screen.findByRole("heading", { name: "Benchmark results" });
+    expect(call).toHaveBeenCalledWith("/api/benchmark/run", null, { method: "POST" });
+    expect(screen.getByRole("button", { name: /^Sign in$/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "False negative 1 Attack missed" })).toBeTruthy();
+  });
+
   it("rejects password confirmation mismatches before creating an account", async () => {
     render(<AuthPortal register />);
     fireEvent.change(screen.getByLabelText("Your name"), {

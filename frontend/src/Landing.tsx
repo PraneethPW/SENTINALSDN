@@ -16,7 +16,7 @@ export default function Landing() {
               Machine Learning-Based DDoS Attack Detection in Software Defined Networks
             </p>
             <div className="research-actions">
-              <a className="research-button primary" href="/lab">
+              <a className="research-button primary" href="/auth/sign-in#benchmark">
                 Open Detection Lab <ArrowRight size={19} />
               </a>
               <a className="research-button ghost" href="#methodology">

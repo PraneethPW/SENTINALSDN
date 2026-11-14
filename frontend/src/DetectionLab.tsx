@@ -1,13 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
-  ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight,
-  CircleAlert, Database, Layers3, LoaderCircle, Play, RotateCcw, ScanLine,
+  ArrowDownToLine, ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight,
+  CircleAlert, LoaderCircle, Play, RotateCcw,
 } from "lucide-react";
 import { protocolName, request } from "./api";
 import { calculateMetrics, exportCohort, number, outcomeInfo, outcomeOf, percent } from "./benchmark";
 import type { BenchmarkRun, BenchmarkWindow, Outcome } from "./benchmark";
 import BenchmarkChart from "./components/BenchmarkChart";
-import PublicHeader from "./components/PublicHeader";
 
 const perPage = 12;
 const outcomes: Outcome[] = ["tp", "fn", "fp", "tn"];
@@ -37,6 +36,7 @@ function WindowInspector({ row, threshold }: { row: BenchmarkWindow; threshold: 
 }
 
 function Results({ run }: { run: BenchmarkRun }) {
+  const protocolId = useId(), thresholdId = useId(), windowsId = useId();
   const [threshold, setThreshold] = useState(run.model.threshold);
   const [protocol, setProtocol] = useState("all");
   const [outcome, setOutcome] = useState<"all" | Outcome>("all");
@@ -76,8 +76,8 @@ function Results({ run }: { run: BenchmarkRun }) {
     <>
       <div className="bench-scope">
         <div><span className="bench-complete-dot" /> <strong>Run complete</strong><span>{number(run.dataset.rows)} windows scored in {run.inference_ms} ms</span></div>
-        <div className="bench-protocol"><label htmlFor="bench-protocol">Protocol</label>
-          <select id="bench-protocol" value={protocol} onChange={(event) => {
+        <div className="bench-protocol"><label htmlFor={protocolId}>Protocol</label>
+          <select id={protocolId} value={protocol} onChange={(event) => {
             setProtocol(event.target.value);
             resetTable();
           }}>
@@ -110,14 +110,14 @@ function Results({ run }: { run: BenchmarkRun }) {
             <p className="bench-empty">This test partition has no windows for the selected protocol.</p>}
           <div className="bench-threshold">
             <div>
-              <label htmlFor="bench-threshold">Decision threshold <strong>{percent(threshold)}</strong></label>
+              <label htmlFor={thresholdId}>Decision threshold <strong>{percent(threshold)}</strong></label>
               <button className="research-text-link" type="button" onClick={() => changeThreshold(run.model.threshold)}
                 disabled={threshold === run.model.threshold}>
                 <RotateCcw size={14} /> Reset
               </button>
             </div>
             <input
-              id="bench-threshold" type="range" min="0" max="1" step="0.001"
+              id={thresholdId} type="range" min="0" max="1" step="0.001"
               value={threshold} onChange={(event) => changeThreshold(Number(event.target.value))}
               aria-valuetext={percent(threshold)}
             />
@@ -141,10 +141,10 @@ function Results({ run }: { run: BenchmarkRun }) {
           </div>
         </section>
       </div>
-      <section className="bench-panel bench-windows" aria-labelledby="windows-heading">
+      <section className="bench-panel bench-windows" aria-labelledby={windowsId}>
         <div className="bench-panel-heading bench-window-heading">
           <div>
-            <h2 id="windows-heading">Window evidence</h2>
+            <h2 id={windowsId}>Window evidence</h2>
             <p>Sorted by distance to the selected threshold. Select a window to inspect its five model inputs.</p>
           </div>
           <div className="bench-table-actions">
@@ -222,11 +222,23 @@ function Results({ run }: { run: BenchmarkRun }) {
   );
 }
 
-export default function DetectionLab() {
+export default function DetectionLab({ placement }: { placement: "sign-in" | "workspace" }) {
   const [run, setRun] = useState<BenchmarkRun | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const runButton = useRef<HTMLButtonElement>(null);
+  const resultsHeading = useRef<HTMLHeadingElement>(null);
+  const focusResults = useRef(false);
+  const headingId = useId();
+  const resultsId = useId();
+
+  useEffect(() => {
+    if (run && focusResults.current && document.activeElement === runButton.current)
+      resultsHeading.current?.focus();
+    focusResults.current = false;
+  }, [run]);
+
   async function start() {
     setBusy(true);
     setError("");
@@ -236,6 +248,7 @@ export default function DetectionLab() {
       if (!Array.isArray(result.windows) || result.windows.length !== result.dataset?.rows || !result.model) {
         throw new Error("The API did not return a complete benchmark. Check the backend version and try again.");
       }
+      focusResults.current = document.activeElement === runButton.current;
       setRun(result);
       setStatus(`Run complete. ${number(result.dataset.rows)} labeled windows scored.`);
     } catch (e) {
@@ -245,43 +258,46 @@ export default function DetectionLab() {
       setBusy(false);
     }
   }
+
   return (
-    <div className="research">
-      <PublicHeader lab />
-      <main className="research-width research-main lab-main">
-        <a className="research-text-link bench-back" href="/"><ArrowLeft size={15} /> Project overview</a>
-        <section className="research-hero lab-hero" aria-labelledby="lab-heading">
-          <div className="research-hero-image" />
-          <div className="research-hero-copy">
-            <p className="research-eyebrow"><span /> GROUP-HOLDOUT BENCHMARK</p>
-            <h1 id="lab-heading">Detection <em>Lab</em></h1>
-            <p className="research-hero-description">
-              Run the same model used for live SDN telemetry on published, labeled flow windows.
-              Inspect every prediction and see how the decision threshold affects errors.
-            </p>
-            <button className="research-button primary" type="button" onClick={() => void start()} disabled={busy}>
-              {busy ? <LoaderCircle size={18} className="spin" /> : <Play size={18} />}
-              {busy ? "Scoring windows…" : run ? "Rerun benchmark" : "Run benchmark"}
-            </button>
+    <div className={`benchmark-embed benchmark-${placement}`}>
+      <section className="research-hero lab-hero" id="benchmark" aria-labelledby={headingId} tabIndex={-1}>
+        <div className="research-hero-image" />
+        <div className="research-hero-copy">
+          <p className="research-eyebrow"><span /> MODEL EVALUATION</p>
+          <h2 id={headingId}>Detection <em>Lab</em></h2>
+          <p className="research-hero-description">
+            Rerun the live detector on 4,050 labeled SDN flow windows. Inspect false alarms and missed attacks, then export the evidence.
+          </p>
+          <button
+            ref={runButton}
+            className="research-button primary"
+            type="button"
+            onClick={() => { if (!busy) void start(); }}
+            aria-disabled={busy}
+            aria-busy={busy}
+          >
+            {busy ? <LoaderCircle size={18} className="spin" /> : <Play size={18} />}
+            {busy ? "Scoring windows…" : run ? "Rerun benchmark" : "Run benchmark"}
+          </button>
+          {placement === "sign-in" ? <span className="bench-access-note">No account required</span> : null}
+          <p className="research-sr-only" role="status">{status}</p>
+          {error ? <p className="bench-error" role="alert"><CircleAlert size={18} />{error}</p> : null}
+        </div>
+      </section>
+      {run ? (
+        <section className="benchmark-results" aria-labelledby={resultsId}>
+          <div className="research-section-title benchmark-results-title">
+            <h2 id={resultsId} ref={resultsHeading} tabIndex={-1}>Benchmark results</h2>
+            <a className="research-text-link" href={sourceUrl}>Published Mininet dataset <ArrowUpRight size={15} /></a>
           </div>
-          <div className="bench-dataset">
-            <Database size={20} />
-            <div><strong>Published Mininet dataset</strong><a href={sourceUrl}>Mendeley Data <ArrowUpRight size={13} /></a></div>
-          </div>
+          <Results key={run.id} run={run} />
+          <footer className="bench-footer">
+            <p>Labels come from published lab captures. Results describe this test partition. Network-specific accuracy requires a separate labeled evaluation.</p>
+            <a className="research-text-link" href="/#methodology">Methodology <ArrowRight size={15} /></a>
+          </footer>
         </section>
-        <p className="research-sr-only" role="status">{status}</p>
-        {error && <p className="bench-error" role="alert"><CircleAlert size={18} />{error}</p>}
-        {run ? <Results key={run.id} run={run} /> : (
-          <div className="bench-ready">
-            <article className="bench-panel"><Layers3 size={23} /><div><h2>Group-held-out test data</h2><p>4,050 measured SDN windows from 30 groups excluded from training and threshold selection.</p></div></article>
-            <article className="bench-panel"><ScanLine size={23} /><div><h2>Traceable predictions</h2><p>Explore false alarms and misses, inspect the input features, and export the selected windows as CSV.</p></div></article>
-          </div>
-        )}
-        <footer className="bench-footer">
-          <p>Labels come from published lab captures. Results describe this test partition. Network-specific accuracy requires a separate labeled evaluation.</p>
-          <a className="research-text-link" href="/#methodology">Methodology <ArrowRight size={15} /></a>
-        </footer>
-      </main>
+      ) : null}
     </div>
   );
 }

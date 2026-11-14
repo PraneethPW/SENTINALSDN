@@ -12,6 +12,7 @@ import { API, request } from "./api";
 import type { User } from "./api";
 import { writeSession } from "./session";
 import { Brand } from "./components/PublicHeader";
+import DetectionLab from "./DetectionLab";
 export type AuthResult = { token: string; user: User };
 const messages: Record<string, string> = {
   google_cancelled: "Google sign-in was cancelled. You can try again.",
@@ -135,14 +136,15 @@ export default function AuthPortal({
     }
   }
   return (
-    <main className="auth-page">
+    <main className={`auth-page${register ? "" : " auth-with-benchmark"}`}>
       <div className="auth-main">
         <header>
           <Brand />
-          <a href="/" className="auth-back">
-            <ArrowLeft size={15} />
-            Back to Sentinel
-          </a>
+          {register ? (
+            <a href="/" className="auth-back"><ArrowLeft size={15} /> Back to Sentinel</a>
+          ) : (
+            <a href="#benchmark" className="research-text-link auth-benchmark-link">Detection Lab <ArrowRight size={14} /></a>
+          )}
         </header>
         <section className="auth-form-wrap">
           <h1>{register ? "Create your workspace." : "Sign in to Sentinel."}</h1>
@@ -301,16 +303,15 @@ export default function AuthPortal({
             <a href="/privacy">Privacy details</a>
           </p>
         </section>
-        <footer>
-          OBSERVE. UNDERSTAND. DEFEND.<span>SENTINEL / SDN</span>
-        </footer>
       </div>
-      <aside className="auth-art">
-        <p className="lp-kicker">LIVE SDN WORKSPACE</p>
-        <h2>Network evidence<br /><em>in real time.</em></h2>
-        <p>Inspect flow measurements, OpenFlow topology and detector verdicts in your private workspace.</p>
-        <a href="/lab" className="research-button ghost">Open Detection Lab <ArrowRight size={16} /></a>
-      </aside>
+      {register ? (
+        <aside className="auth-art">
+          <p className="lp-kicker">LIVE SDN WORKSPACE</p>
+          <h2>Network evidence<br /><em>in real time.</em></h2>
+          <p>Inspect flow measurements, OpenFlow topology and detector verdicts in your private workspace.</p>
+          <a href="/auth/sign-in#benchmark" className="research-button ghost">Open Detection Lab <ArrowRight size={16} /></a>
+        </aside>
+      ) : <DetectionLab placement="sign-in" />}
     </main>
   );
 }

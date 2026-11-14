@@ -1,7 +1,7 @@
 # Detection Lab reviewer walkthrough
 
 Start from the repository root with `npm run local:up`, then open
-[Detection Lab](http://localhost:5180/lab). The benchmark ships with the
+[the sign-in page](http://localhost:5180/auth/sign-in#benchmark). You can run the benchmark there or open Detection Lab in the signed-in workspace. The benchmark ships with the
 API image. Initial image builds require internet; running the benchmark
 uses the local model and bundled dataset partition.
 

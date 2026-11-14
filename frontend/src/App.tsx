@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Activity as ViewActivity, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
   AnimatePresence,
@@ -44,6 +44,7 @@ import {
 import { API, compact, protocolName, request, time } from "./api";
 import type { Flow, Incident, User } from "./api";
 import FlowEvidence from "./components/FlowEvidence";
+import DetectionLab from "./DetectionLab";
 import { useNetwork } from "./useNetwork";
 import { WorkspaceControls, FlowHistory } from "./components/WorkspaceControls";
 import { Topology, TrafficChart } from "./components/Charts";
@@ -54,6 +55,7 @@ const sections = [
   { id: "traffic", label: "Live traffic", icon: Waves },
   { id: "topology", label: "Network topology", icon: Network },
   { id: "incidents", label: "Incidents", icon: Shield },
+  { id: "benchmark", label: "Detection Lab", icon: ScanLine },
   { id: "intelligence", label: "Intelligence", icon: Sparkles },
   { id: "system", label: "System settings", icon: Settings2 },
   { id: "setup", label: "Network setup", icon: Radio },
@@ -70,6 +72,7 @@ const titles: Record<Section, [string, string]> = {
     "Incident center",
     "Review flagged flows and track incident decisions.",
   ],
+  benchmark: ["Model evaluation", "Measure detection accuracy on the published SDN test partition."],
   intelligence: [
     "Intelligence",
     "Inspect the installed model and saved incident analyses.",
@@ -598,9 +601,6 @@ export default function App() {
               ) : null}
             </button>
           ))}
-          <a className="nav-item benchmark-nav" href="/lab">
-            <ScanLine size={17} strokeWidth={1.5} /><span>Detection Lab</span><ArrowUpRight size={14} />
-          </a>
         </nav>
         <div className="sidebar-bottom">
           <div className="engine-card">
@@ -730,7 +730,7 @@ export default function App() {
               <h1>{titles[section][0]}</h1>
               <p>{titles[section][1]}</p>
             </div>
-            <div className="page-actions">
+            {section !== "benchmark" ? <div className="page-actions">
               <button
                 className="button secondary"
                 onClick={() => setGuideOpen(true)}
@@ -750,7 +750,7 @@ export default function App() {
                 )}
                 Export flows
               </button>
-            </div>
+            </div> : null}
           </div>
           {error || (data && connection !== "live") ? (
             <div className="connection-warning" role="status">
@@ -833,6 +833,9 @@ export default function App() {
               provider requests failed. Detection operates independently.
             </div>
           ) : null}
+          <ViewActivity mode={section === "benchmark" ? "visible" : "hidden"}>
+            <DetectionLab placement="workspace" />
+          </ViewActivity>
           <AnimatePresence mode="wait">
             <motion.div
               key={section}
@@ -862,7 +865,9 @@ export default function App() {
                         <button className="button primary" onClick={() => navigate(liveTelemetry ? "traffic" : "setup")}>
                           {liveTelemetry ? "Inspect live traffic" : "Open network setup"} <ArrowRight size={16} />
                         </button>
-                        <a className="button secondary" href="/lab">Run the benchmark <ArrowUpRight size={15} /></a>
+                        <button className="button secondary" onClick={() => navigate("benchmark")}>
+                          Run the benchmark <ArrowRight size={15} />
+                        </button>
                       </div>
                     </div>
                   </section>

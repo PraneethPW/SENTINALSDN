@@ -8,7 +8,7 @@ import {
   LoaderCircle,
   LockKeyhole,
 } from "lucide-react";
-import { API, request } from "./api";
+import { request } from "./api";
 import type { User } from "./api";
 import { writeSession } from "./session";
 import { Brand } from "./components/PublicHeader";
@@ -19,74 +19,17 @@ import { useMotionPreference } from "./motionPreference";
 import NetworkHologram from "./components/NetworkHologram";
 export type AuthResult = { token: string; user: User };
 const messages: Record<string, string> = {
-  google_cancelled: "Google sign-in was cancelled. You can try again.",
-  google_unavailable:
-    "Google could not verify your sign-in. Try again or use email.",
-  existing_email:
-    "This email already has a password account. Sign in with your password, then connect Google in System settings.",
-  google_link_mismatch:
-    "Choose the Google account with the same email as your signed-in Sentinel account.",
-  google_link_conflict:
-    "This Google identity is already connected to another account.",
   registration_closed: "New account registration is currently closed.",
   account_unavailable:
     "This account is unavailable. Contact your workspace administrator.",
 };
-function GoogleMark() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-      <path
-        fill="#EA4335"
-        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-      />
-      <path
-        fill="#4285F4"
-        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6C44.4 38.03 46.98 31.85 46.98 24.55z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M10.53 28.59A14.41 14.41 0 019.76 24c0-1.59.27-3.13.77-4.59l-7.98-6.19A23.87 23.87 0 000 24c0 3.87.93 7.53 2.56 10.78l7.97-6.19z"
-      />
-      <path
-        fill="#34A853"
-        d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-      />
-    </svg>
-  );
-}
-export async function beginGoogle(linkTicket?: string) {
-  const bytes = crypto.getRandomValues(new Uint8Array(48));
-  const verifier = btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-  sessionStorage.setItem("sentinel.google.verifier", verifier);
-  const hashed = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(verifier),
-  );
-  const value = btoa(String.fromCharCode(...new Uint8Array(hashed)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-  const url = new URL(`${API}/api/auth/google/start`, location.origin);
-  url.searchParams.set("origin", location.origin);
-  url.searchParams.set("handoff_challenge", value);
-  if (linkTicket) url.searchParams.set("link_ticket", linkTicket);
-  location.assign(url);
-}
 export default function AuthPortal({
   register = false,
 }: {
   register?: boolean;
 }) {
   const { reduced } = useMotionPreference();
-  const [config, setConfig] = useState<{
-      registration: boolean;
-      google: boolean;
-    } | null>(null),
-    [configError, setConfigError] = useState(false),
-    [configLoading, setConfigLoading] = useState(true);
+  const [config, setConfig] = useState<{ registration: boolean } | null>(null);
   const [name, setName] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
@@ -98,51 +41,15 @@ export default function AuthPortal({
         messages[new URLSearchParams(location.search).get("error") ?? ""] ?? "",
     );
   useEffect(() => {
-    const c = new AbortController();
-    void request<{ registration: boolean; google: boolean }>(
-      "/api/auth/config",
-      null,
-      { signal: AbortSignal.any([c.signal, AbortSignal.timeout(10000)]) },
-    )
-      .then(setConfig)
-      .catch((e) => {
-        if (e.name !== "AbortError") setConfigError(true);
-      })
-      .finally(() => {
-        if (!c.signal.aborted) setConfigLoading(false);
-      });
-    return () => c.abort();
-  }, []);
-  async function googleSignIn() {
-    setBusy(true);
-    setError("");
-    let available = config;
-    if (!available) {
-      try {
-        available = await request<{ registration: boolean; google: boolean }>(
-          "/api/auth/config", null, { signal: AbortSignal.timeout(10000) },
-        );
-        setConfig(available);
-        setConfigError(false);
-      } catch {
-        setConfigError(true);
-        setError("We couldn’t connect to Google sign-in. Please try again shortly.");
-        setBusy(false);
-        return;
-      }
-    }
-    if (!available.google) {
-      setError("Google sign-in is awaiting setup. You can use email below.");
-      setBusy(false);
-      return;
-    }
-    try {
-      await beginGoogle();
-    } catch {
-      setError("Google sign-in needs browser storage and a secure connection. Please try email.");
-      setBusy(false);
-    }
-  }
+    if (!register) return;
+    const controller = new AbortController();
+    void request<{ registration: boolean }>("/api/auth/config", null, {
+      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
+    }).then(setConfig).catch(() => {
+      // Submission reports connectivity errors; the form remains available to retry.
+    });
+    return () => controller.abort();
+  }, [register]);
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -198,30 +105,6 @@ export default function AuthPortal({
                 ? "Create your private workspace, then start your live lab in one click."
                 : "Sign in to see live flows and alerts from your workspace. The benchmark is public."}
             </p>
-            <button
-              className="auth-google"
-              type="button"
-              disabled={busy || configLoading || config?.google === false}
-              onClick={() => void googleSignIn()}
-            >
-              <GoogleMark />
-              Continue with Google
-            </button>
-            {!config?.google && config ? (
-              <p className="auth-provider-note">
-                Google sign-in is awaiting setup. Email access is available below.
-              </p>
-            ) : null}
-            {configError ? (
-              <p className="auth-provider-note" role="status">
-                We couldn’t reach the sign-in service. Select Continue with Google to retry.
-              </p>
-            ) : null}
-            <div className="auth-divider">
-              <span />
-              {register ? "OR CREATE WITH EMAIL" : "OR SIGN IN WITH EMAIL"}
-              <span />
-            </div>
             <form onSubmit={submit} className="auth-form">
               {register ? (
                 <label htmlFor="full-name">

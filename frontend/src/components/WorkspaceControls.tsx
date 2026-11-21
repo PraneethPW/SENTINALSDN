@@ -3,7 +3,6 @@ import type { FormEvent } from "react";
 import { LoaderCircle } from "lucide-react";
 import { request, protocolName, compact, time } from "../api";
 import type { User, Flow } from "../api";
-import { beginGoogle } from "../AuthPortal";
 type Account = User & { active: boolean; approved?: boolean };
 export function WorkspaceControls({
   token,
@@ -215,7 +214,6 @@ export function WorkspaceControls({
           </div>
         </>
       ) : null}
-      <GoogleConnection token={token} />
       {user.password_enabled !== false ? (
         <details className="password-details">
           <summary>Change your password</summary>
@@ -394,79 +392,5 @@ export function FlowHistory({ token }: { token: string }) {
         </button>
       ) : null}
     </section>
-  );
-}
-
-function GoogleConnection({ token }: { token: string }) {
-  const [linked, setLinked] = useState(false),
-    [enabled, setEnabled] = useState(false),
-    [ready, setReady] = useState(false),
-    [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
-  useEffect(() => {
-    let active = true;
-    void Promise.all([
-      request<{ google: boolean }>("/api/auth/connections", token),
-      request<{ google: boolean }>("/api/auth/config"),
-    ])
-      .then(([connection, config]) => {
-        if (active) {
-          setLinked(connection.google);
-          setEnabled(config.google);
-          setReady(true);
-        }
-      })
-      .catch(() => {
-        if (active) setError("Unable to check Google connection.");
-      });
-    return () => {
-      active = false;
-    };
-  }, [token]);
-  async function connect() {
-    setBusy(true);
-    try {
-      const result = await request<{ ticket: string }>(
-        "/api/auth/google/link-ticket",
-        token,
-        { method: "POST" },
-      );
-      await beginGoogle(result.ticket);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Google connection failed");
-      setBusy(false);
-    }
-  }
-  return (
-    <div className="google-connection">
-      <div>
-        <strong>Google sign-in</strong>
-        <p className="footnote">
-          {!ready
-            ? "Checking Google connection…"
-            : linked
-              ? "Connected to this account."
-              : enabled
-                ? "Connect the Google account with the same email as your Sentinel account."
-                : "Google provider setup is pending."}
-        </p>
-      </div>
-      <button
-        className="button secondary"
-        disabled={!ready || !enabled || linked || busy}
-        onClick={() => void connect()}
-      >
-        {linked
-          ? "Google connected"
-          : busy
-            ? "Opening Google…"
-            : "Connect Google"}
-      </button>
-      {error ? (
-        <p role="alert" className="operation-message">
-          {error}
-        </p>
-      ) : null}
-    </div>
   );
 }

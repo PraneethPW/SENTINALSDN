@@ -11,7 +11,7 @@ async function check(name, url, validate, options = {}) {
   } catch (error) { failures++; console.error(`FAIL ${name}: ${error.message}`); }
 }
 await Promise.all([
-  ...['/', '/auth/sign-in', '/auth/register', '/app', '/privacy'].map(route =>
+  ...['/', '/auth/sign-in', '/auth/register', '/lab', '/app', '/privacy'].map(route =>
     check(`frontend ${route}`, frontend + route, async response => {
       const html = await response.text();
       if (!html.includes('id="root"') || !html.includes('type="module"')) throw new Error('Application HTML missing (possibly deployment protection)');

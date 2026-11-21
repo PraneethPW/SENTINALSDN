@@ -237,7 +237,8 @@ function Results({ run, initialOutcome }: { run: BenchmarkRun; initialOutcome: "
   );
 }
 
-export default function DetectionLab({ placement }: { placement: "sign-in" | "workspace" }) {
+export default function DetectionLab({ placement }: { placement: "public" | "workspace" }) {
+  const Heading = placement === "public" ? "h1" : "h2";
   const [run, setRun] = useState<BenchmarkRun | null>(null);
   const [busy, setBusy] = useState<"public" | "upload" | null>(null);
   const [error, setError] = useState<{ source: "public" | "upload"; message: string } | null>(null);
@@ -250,7 +251,7 @@ export default function DetectionLab({ placement }: { placement: "sign-in" | "wo
   const resultsId = useId();
 
   useEffect(() => {
-    if (placement !== "sign-in" || location.hash !== "#upload-dataset") return;
+    if (placement !== "public" || location.hash !== "#upload-dataset") return;
     const frame = requestAnimationFrame(() => document.getElementById("upload-dataset")?.scrollIntoView());
     return () => cancelAnimationFrame(frame);
   }, [placement]);
@@ -290,13 +291,13 @@ export default function DetectionLab({ placement }: { placement: "sign-in" | "wo
   }
 
   const published = run?.dataset.kind === "public" ? run.dataset : null;
-  const requestedOutcome = placement === "sign-in" ? new URLSearchParams(location.search).get("outcome") : null;
+  const requestedOutcome = placement === "public" ? new URLSearchParams(location.search).get("outcome") : null;
   const initialOutcome = requestedOutcome === "fn" || requestedOutcome === "fp" ? requestedOutcome : "all";
   return (
     <div className={`benchmark-embed benchmark-${placement}`}>
       <section className="lab-intro" id="benchmark" aria-labelledby={headingId} tabIndex={-1}>
         <div className="lab-intro-main">
-          <h2 id={headingId}>Detection Lab</h2>
+          <Heading id={headingId}>Detection Lab</Heading>
           <p>Run the installed model on the held-out Mininet test set or score a CSV of your own SDN flow windows.</p>
           {initialOutcome !== "all" && !run ? <p className="lab-selected-outcome">Run the benchmark to inspect {outcomeInfo[initialOutcome].name.toLowerCase()} windows.</p> : null}
           <div className="lab-actions-row">

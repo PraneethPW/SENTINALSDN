@@ -61,8 +61,8 @@ export default function BenchmarkReference({
               <caption>Decisions at the {percent(reference.model.threshold)} threshold</caption>
               <thead><tr><th scope="col">Actual label</th><th scope="col">Flagged</th><th scope="col">Passed</th></tr></thead>
               <tbody>
-                <tr><th scope="row">Attack</th><td>{number(tp)}</td><td><a href="/auth/sign-in?outcome=fn#benchmark">{number(fn)} missed <ArrowUpRight size={13} /></a></td></tr>
-                <tr><th scope="row">Benign</th><td><a href="/auth/sign-in?outcome=fp#benchmark">{number(fp)} false alarms <ArrowUpRight size={13} /></a></td><td>{number(tn)}</td></tr>
+                <tr><th scope="row">Attack</th><td>{number(tp)}</td><td><a href="/lab?outcome=fn#benchmark">{number(fn)} missed <ArrowUpRight size={13} /></a></td></tr>
+                <tr><th scope="row">Benign</th><td><a href="/lab?outcome=fp#benchmark">{number(fp)} false alarms <ArrowUpRight size={13} /></a></td><td>{number(tn)}</td></tr>
               </tbody>
             </table>
           ) : null}

@@ -268,3 +268,5 @@ html { scroll-padding-top: 95px; }
   *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; }
   .hologram-globe { transform: rotate(-14deg); }
 }
+
+.public-lab-main { display: grid; gap: 24px; padding-block: 32px 60px; }

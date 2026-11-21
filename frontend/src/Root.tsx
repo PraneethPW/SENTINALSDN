@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Landing from "./Landing";
+import Lab from "./Lab";
 import { Brand } from "./components/PublicHeader";
 import { CinematicBackdrop, MotionToggle } from "./components/CinematicScene";
 import { useMotionPreference } from "./motionPreference";
@@ -298,7 +299,8 @@ export default function Root() {
     const labels: Record<string, string> = { "/": "Network Defense Cockpit", "/auth/sign-in": "Sign in", "/auth/register": "Create workspace", "/auth/callback": "Secure sign-in", "/app": "Live workspace", "/account": "Workspace access", "/lab": "Detection Lab", "/privacy": "Privacy" };
     document.title = `${labels[path] ?? "Page not found"} | Sentinel SDN`;
   }, [path]);
-  if (path === "/auth/sign-in" || path === "/lab") return <AuthPortal />;
+  if (path === "/auth/sign-in") return <AuthPortal />;
+  if (path === "/lab") return <Lab />;
   if (path === "/auth/register") return <AuthPortal register />;
   if (path === "/auth/callback") return <Callback />;
   if (path === "/app" || path === "/account") return <WorkspaceGate />;

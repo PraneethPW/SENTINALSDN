@@ -335,8 +335,8 @@
 .auth-with-benchmark .benchmark-results .research-text-link {
   color: var(--research-accent);
 }
-.benchmark-sign-in { display: contents; }
-.benchmark-sign-in .benchmark-results { grid-column: 1 / -1; }
+.benchmark-public { display: contents; }
+.benchmark-public .benchmark-results { grid-column: 1 / -1; }
 .benchmark-results-title {
   margin-block: 9px 0;
   align-items: center;
@@ -416,7 +416,7 @@
 .reference-limits { margin-top: 10px; }
 .auth-page .reference-matrix td a { color: var(--research-issue); }
 .auth-page .reference-foot a, .auth-page .dataset-actions a { color: var(--research-accent); }
-.benchmark-sign-in .dataset-upload { grid-column: 1 / -1; }
+.benchmark-public .dataset-upload { grid-column: 1 / -1; }
 .benchmark-workspace .dataset-upload { margin-block: 15px 22px; }
 .dataset-upload { padding: clamp(18px, 3vw, 36px); scroll-margin-top: 80px; }
 .dataset-upload :is(h2, input) { scroll-margin-top: 85px; }
@@ -497,7 +497,7 @@
   border-radius: 8px;
   padding: clamp(18px, 3vw, 35px);
 }
-.lab-intro-main > h2 { font: 700 clamp(28px, 3.3vw, 43px)/1.05 var(--research-heading); letter-spacing: -.045em; }
+.lab-intro-main > :is(h1, h2) { font: 700 clamp(28px, 3.3vw, 43px)/1.05 var(--research-heading); letter-spacing: -.045em; }
 .lab-intro-main > p:not(.bench-error) { margin-top: 9px; max-width: 59ch; color: var(--research-muted); font-size: 14px; line-height: 1.6; }
 .lab-intro-main > p.lab-selected-outcome { color: var(--research-issue); }
 .lab-actions-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 17px; }

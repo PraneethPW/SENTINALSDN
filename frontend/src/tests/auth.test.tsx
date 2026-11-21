@@ -1,6 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import AuthPortal from "../AuthPortal";
+import Lab from "../Lab";
 import { request } from "../api";
 vi.mock("../api", async () => ({
   ...(await vi.importActual("../api")),
@@ -32,6 +33,9 @@ describe("public account entry", () => {
     expect(screen.queryByLabelText("Confirm password")).toBeNull();
     expect(screen.queryByText(/Google/)).toBeNull();
     expect(call.mock.calls.some(([path]) => path === "/api/auth/config")).toBe(false);
+    expect(screen.queryByText(/Detection Lab/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Run benchmark" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Evaluate your own CSV" })).toBeNull();
   });
   it("respects disabled email registration", async () => {
     call.mockResolvedValue({ registration: false, google: true });
@@ -40,7 +44,7 @@ describe("public account entry", () => {
     expect((screen.getByRole("button", { name: "Create account" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByText(/Google/)).toBeNull();
   });
-  it("runs the benchmark from sign-in and displays evidence beside the form", async () => {
+  it("runs the benchmark on its own public page without a sign-in form", async () => {
     call.mockImplementation((url) =>
       Promise.resolve(
         url === "/api/benchmark/run"
@@ -58,13 +62,13 @@ describe("public account entry", () => {
           : { registration: true, google: false },
       ),
     );
-    render(<AuthPortal />);
+    render(<Lab />);
 
     fireEvent.click(screen.getByRole("button", { name: "Run benchmark" }));
 
     await screen.findByRole("heading", { name: "Benchmark results" });
     expect(call).toHaveBeenCalledWith("/api/benchmark/run", null, { method: "POST" });
-    expect(screen.getByRole("button", { name: /^Sign in$/ })).toBeTruthy();
+    expect(screen.queryByLabelText("Email address")).toBeNull();
     expect(screen.getByRole("button", { name: "False negative 1 Attack missed" })).toBeTruthy();
   });
 

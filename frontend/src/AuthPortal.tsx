@@ -12,7 +12,6 @@ import { request } from "./api";
 import type { User } from "./api";
 import { writeSession } from "./session";
 import { Brand } from "./components/PublicHeader";
-import DetectionLab from "./DetectionLab";
 import BenchmarkReference from "./components/BenchmarkReference";
 import { CinematicBackdrop, CinematicChapter, MotionToggle } from "./components/CinematicScene";
 import { useMotionPreference } from "./motionPreference";
@@ -84,16 +83,12 @@ export default function AuthPortal({
   return (
     <div className={`cinematic-page cinematic-auth${reduced ? " motion-off" : ""}`}>
       <CinematicBackdrop scene="silicon" />
-      <main className={`auth-page${register ? "" : " auth-with-benchmark"}`}>
+      <main className="auth-page">
         <div className="auth-main">
           <header>
             <Brand />
             <div className="research-nav-actions">
-              {register ? (
-                <a href="/" className="auth-back"><ArrowLeft size={15} /> Back to Sentinel</a>
-              ) : (
-                <a href="#benchmark" className="research-text-link auth-benchmark-link">Detection Lab <ArrowRight size={14} /></a>
-              )}
+              <a href="/" className="auth-back"><ArrowLeft size={15} /> Back to Sentinel</a>
               <MotionToggle />
             </div>
           </header>
@@ -103,7 +98,7 @@ export default function AuthPortal({
             <p className="auth-intro">
               {register
                 ? "Create your private workspace, then start your live lab in one click."
-                : "Sign in to see live flows and alerts from your workspace. The benchmark is public."}
+                : "Sign in to see live flows and alerts from your workspace."}
             </p>
             <form onSubmit={submit} className="auth-form">
               {register ? (
@@ -233,7 +228,7 @@ export default function AuthPortal({
             <CinematicChapter scene="rack" className="auth-register-reference benchmark-embed">
               <BenchmarkReference action={<a href="/lab#benchmark" className="research-button ghost">Open Detection Lab</a>} />
             </CinematicChapter>
-          ) : <DetectionLab placement="sign-in" />}
+          ) : null}
         </div>
       </main>
     </div>

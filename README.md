@@ -6,7 +6,7 @@ Sentinel classifies flow windows measured by OpenFlow switches and stores the re
 
 ## Review the project
 
-1. Open **Detection Lab** from the homepage, then click **Run benchmark** on the sign-in page. Inside the workspace, open **Detection Lab** from the sidebar. The API scores 4,050 published 30-second windows across 30 held-out groups using the checksum-verified model. This works without an account, managed lab, or dataset download.
+1. Open **Detection Lab** from the homepage, then click **Run benchmark** on its dedicated public page. Inside the workspace, open **Detection Lab** from the sidebar. The API scores 4,050 published 30-second windows across 30 held-out groups using the checksum-verified model. This works without an account, managed lab, or dataset download.
 2. At **52.5%**, expect **1,428 true positives, 257 false negatives, 52 false positives, and 2,313 true negatives**. Select **False negative**, open a window, and compare the five inputs, score, verdict, and published label.
 3. Change the threshold or filter by protocol to see the precision and recall trade-off. **Export CSV** downloads all matching windows with their inputs, labels, scores, threshold, run ID, and checksums. **Reset** restores the live detector's configured threshold to the benchmark display.
 4. Select **Try your dataset** to upload feature CSVs or live-flow exports. Add known labels for accuracy metrics or upload without labels for predictions.
@@ -218,7 +218,7 @@ The supplied artifact expects 30-second observations. Windows outside ±5 second
 
 ## Landing, registration and Google sign-in
 
-The public homepage is `/`. The sign-in page at `/auth/sign-in` includes Detection Lab. The shared `/lab` URL also opens this sign-in page. Registration is `/auth/register`, restricted team access is `/account`, and the authenticated console is `/app` with a Detection Lab tab. Public routes expose the model and published benchmark results. Operational telemetry stays private.
+The public homepage is `/`. The sign-in page at `/auth/sign-in` is dedicated to email/password authentication. The public Detection Lab has its own page at `/lab`. Registration is `/auth/register`, restricted team access is `/account`, and the authenticated console is `/app` with a Detection Lab tab. Public routes expose the model and published benchmark results. Operational telemetry stays private.
 
 Email registration stores an Argon2 hash and immediately creates an **isolated private workspace with its registrant as administrator**. It does not claim inbox verification or send an email. New accounts enter an empty dashboard with Network setup, not an administrator-approval queue. Google-only registrations receive the same private workspace. Existing approved lab members keep their original membership and role. Migration 005 moves never-approved public registrations without an explicit approval decision stranded at pending approval into private empty workspaces; deliberately restricted team accounts remain restricted.
 

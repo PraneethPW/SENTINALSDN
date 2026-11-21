@@ -1,7 +1,7 @@
 # Detection Lab reviewer walkthrough
 
 Start from the repository root with `npm run local:up`, then open
-[the sign-in page](http://localhost:5180/auth/sign-in#benchmark). You can run the benchmark there or open Detection Lab in the signed-in workspace. The benchmark ships with the
+[the Detection Lab page](http://localhost:5180/lab#benchmark). You can run the benchmark there or open Detection Lab in the signed-in workspace. The benchmark ships with the
 API image. Initial image builds require internet; running the benchmark
 uses the local model and bundled dataset partition.
 
@@ -36,7 +36,7 @@ authenticated endpoint and are delivered to the console over WebSocket.
 
 ## Evaluate your own dataset
 
-Select **Try your dataset** on the sign-in page or in the workspace Detection Lab.
+Select **Try your dataset** on the public lab page or in the workspace Detection Lab.
 Download the CSV template or export measured windows from **Live traffic**.
 Upload up to 5,000 windows in a UTF-8 CSV up to 1 MB. For a larger live export, choose a shorter time range or split the CSV and retain the header in each file.
 

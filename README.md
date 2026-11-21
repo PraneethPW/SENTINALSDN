@@ -87,7 +87,170 @@ API readiness: https://api-production-5de58.up.railway.app/health/ready
 
 The current live feed comes from the real Mininet/OVS lab on the development Mac. It requires that machine and the Colima lab to remain running. This is live lab telemetry, not an attached production network. Initial administrator credentials are delivered separately and are never committed.
 
-## Run locally
+## Windows: install from ZIP
+
+Use **Windows PowerShell** for the commands below. This runs the frontend and Python API directly on Windows, PostgreSQL in Docker, and the included model inside the API. No Git, Neon account, Google credentials, GPU, training, or separate model server is required.
+
+### 1. Install prerequisites
+
+Install [Node.js LTS](https://nodejs.org/en/download) (22.12+, 24, or 26+), Python **3.12**, and [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/). With Windows Package Manager:
+
+```powershell
+winget install --exact --id OpenJS.NodeJS.LTS
+winget install --exact --id Python.Python.3.12
+winget install --exact --id Docker.DockerDesktop
+```
+
+Enable Docker Desktop's **WSL 2 backend** and **Linux containers**, complete any requested Windows restart, and start Docker Desktop. If WSL is missing, run `wsl --install` in Administrator PowerShell and restart Windows first. Reopen a normal PowerShell window, then check:
+
+```powershell
+node --version
+npm.cmd --version
+py -3.12 --version
+docker info
+docker compose version
+```
+
+### 2. Download and extract the project
+
+Download [the main branch ZIP](https://github.com/PraneethPW/SENTINALSDN/archive/refs/heads/main.zip) and extract it. The examples below assume the extracted folder is `Downloads\SENTINALSDN-main`; change that path if you extracted elsewhere. Run all commands in order.
+
+```powershell
+Set-Location "$env:USERPROFILE\Downloads\SENTINALSDN-main"
+```
+
+### 3. Create the local database and backend environment — once
+
+Run this block **once**, in the same PowerShell window. It generates a local database password and collector token, starts PostgreSQL, and writes `backend\.env` using the committed example. Keep the generated file for future starts.
+
+```powershell
+$ErrorActionPreference = 'Stop'
+$env:POSTGRES_PASSWORD = py -3.12 -c "import secrets; print(secrets.token_hex(24))"
+$collectorToken = py -3.12 -c "import secrets; print(secrets.token_urlsafe(48))"
+
+docker run --detach --name sentinel-windows-db --publish 127.0.0.1:55432:5432 --env POSTGRES_DB=sentinel_local --env POSTGRES_USER=sentinel --env POSTGRES_PASSWORD --volume sentinel-windows-db:/var/lib/postgresql/data postgres:17-alpine
+if ($LASTEXITCODE -ne 0) { throw 'Database creation failed. Resolve the Docker error before continuing.' }
+
+Copy-Item .\backend\.env.example .\backend\.env
+$backendEnv = Get-Content .\backend\.env -Raw
+$backendEnv = $backendEnv -replace '(?m)^DATABASE_URL=[^\r\n]*', "DATABASE_URL=postgresql://sentinel:$($env:POSTGRES_PASSWORD)@127.0.0.1:55432/sentinel_local"
+$backendEnv = $backendEnv -replace '(?m)^COLLECTOR_TOKEN=[^\r\n]*', "COLLECTOR_TOKEN=$collectorToken"
+[System.IO.File]::WriteAllText((Join-Path (Get-Location).Path 'backend\.env'), $backendEnv)
+Remove-Item Env:\POSTGRES_PASSWORD
+```
+
+The named Docker volume preserves your database. Do not rerun this block to restart the app: a new generated password would not update an existing PostgreSQL volume.
+
+### 4. Install and run the backend and model — terminal 1
+
+```powershell
+Set-Location "$env:USERPROFILE\Downloads\SENTINALSDN-main\backend"
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.lock
+if ($LASTEXITCODE -ne 0) { throw 'Backend dependency installation failed.' }
+.\.venv\Scripts\python.exe -m pip install --no-deps -e .
+if ($LASTEXITCODE -ne 0) { throw 'Backend package installation failed.' }
+Get-FileHash .\artifacts\model.joblib -Algorithm SHA256
+.\.venv\Scripts\python.exe -m app
+```
+
+Keep this terminal running. Start from `backend` so the `.env` and artifact paths resolve. The API loads the model, checks its SHA-256, and applies database migrations automatically. The native launcher selects the Windows event loop required by PostgreSQL; no PowerShell activation-policy change is needed.
+
+The model is already included in `backend\artifacts\model.joblib`; its metadata and benchmark data are alongside it. Expected SHA-256:
+
+```text
+f07c491db78db97fa29e053efd3506c610568797194e611ca984df8a518a0fc3
+```
+
+### 5. Install and run the frontend — terminal 2
+
+Open another PowerShell window:
+
+```powershell
+Set-Location "$env:USERPROFILE\Downloads\SENTINALSDN-main"
+Copy-Item .\frontend\.env.example .\frontend\.env.local
+npm.cmd --prefix frontend ci
+if ($LASTEXITCODE -ne 0) { throw 'Frontend dependency installation failed.' }
+npm.cmd run dev:ui
+```
+
+Keep this terminal running. Open **http://127.0.0.1:5173/auth/register** and register with **name, email, password, and confirm password**. Passwords need at least **14 characters**. Sign in with email and password. Open **http://127.0.0.1:5173/lab** and click **Run benchmark** to test the included model on 4,050 windows.
+
+### 6. Environment files
+
+`.env.example` is a **file**, not a folder. The required templates are already included in the ZIP:
+
+| Template | Local file | Use |
+| --- | --- | --- |
+| [`backend/.env.example`](backend/.env.example) | `backend/.env` | Python API, private database URL, collector token, model configuration |
+| [`frontend/.env.example`](frontend/.env.example) | `frontend/.env.local` | Frontend proxy configuration |
+| [Root `.env.example`](.env.example) | `.env.local-stack` | Complete Docker launcher under Linux/WSL2/macOS; not used for the native steps above |
+
+The essential backend values are below. Step 3 writes the real generated password/token; keep the remaining values from `backend/.env.example`.
+
+```dotenv
+ENVIRONMENT=development
+DATABASE_URL=postgresql://sentinel:YOUR_GENERATED_PASSWORD@127.0.0.1:55432/sentinel_local
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+COLLECTOR_TOKEN=YOUR_GENERATED_TOKEN
+MODEL_PATH=artifacts/model.joblib
+MODEL_SHA256=f07c491db78db97fa29e053efd3506c610568797194e611ca984df8a518a0fc3
+DETECTION_THRESHOLD=0.525
+REGISTRATION_ENABLED=true
+OPENROUTER_API_KEY=
+LAB_HOST_TOKEN=
+```
+
+Frontend `frontend/.env.local`:
+
+```dotenv
+VITE_API_URL=
+API_PROXY_TARGET=http://127.0.0.1:8100
+```
+
+Keep `VITE_API_URL` empty so Vite proxies HTTP and WebSocket requests to the local API. AI summaries are optional; leave `OPENROUTER_API_KEY` blank unless you want to configure them. Never put private credentials in `VITE_*` values or commit generated `.env` files.
+
+### 7. Verify, stop, and restart
+
+In a third PowerShell window:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8100/health/public
+Invoke-RestMethod http://127.0.0.1:8100/health/ready
+```
+
+Both should return HTTP 200 with `ready: true`. API documentation is at **http://127.0.0.1:8100/docs**. If database readiness fails, check `docker logs sentinel-windows-db`, confirm Docker is running, and verify `DATABASE_URL` matches the original database password.
+
+To stop: press **Ctrl+C** in the frontend and backend terminals, then run `docker stop sentinel-windows-db`. Next time, use these commands in separate terminals; no reinstall or `.env` regeneration is needed:
+
+```powershell
+# Terminal 1: database + backend
+docker start sentinel-windows-db
+Set-Location "$env:USERPROFILE\Downloads\SENTINALSDN-main\backend"
+.\.venv\Scripts\python.exe -m app
+```
+
+```powershell
+# Terminal 2: frontend
+Set-Location "$env:USERPROFILE\Downloads\SENTINALSDN-main"
+npm.cmd run dev:ui
+```
+
+### 8. Optional: real live SDN traffic
+
+The steps above run registration, login, the console, CSV scoring, and model benchmarks. Fresh live traffic requires a real SDN collector. In your signed-in workspace, open **Network setup → Connect existing SDN**, download the private setup ZIP, extract it, and open PowerShell in that extracted folder:
+
+```powershell
+py -3.12 connect.py up
+py -3.12 connect.py status
+# Stop this lab when finished:
+py -3.12 connect.py down
+```
+
+Docker Desktop must use Linux containers. Allow about 60–90 seconds after the image build for switch discovery and a first measured window. The automatic **Start my live lab** host requires Linux/WSL2 or macOS; it cannot run directly in native Windows. For the complete managed Docker stack, use the [Linux/WSL2 setup guide](docs/LOCAL_SETUP.md) from a WSL2 terminal with Docker integration enabled.
+
+## Run locally on Linux/WSL2 or macOS
 
 See the complete [installation, environment files, development and testing guide](docs/LOCAL_SETUP.md).
 
@@ -116,7 +279,7 @@ npm run dev:ui
 
 The hot-reload frontend proxies API and WebSocket requests to the local API on port 8100 when `VITE_API_URL` is empty. Copy `frontend/.env.example` to `frontend/.env.local`; use `API_PROXY_TARGET` for a different local API port. An explicit `VITE_API_URL` is honored in development and production. The Docker frontend uses its own same-origin proxy. Never put database credentials, collector secrets or provider keys in `VITE_*` variables.
 
-Environment examples are committed at [`.env.example`](.env.example) (Docker), [`backend/.env.example`](backend/.env.example) (native Python), and [`frontend/.env.example`](frontend/.env.example) (Vite). The launcher generates blank Docker secrets automatically; optional Google and OpenRouter configuration is documented in the setup guide. Run `npm test`, `npm run test:api`, `npm run verify:local`, and `npm run verify:deployment` for the corresponding checks.
+Environment examples are committed at [`.env.example`](.env.example) (Docker), [`backend/.env.example`](backend/.env.example) (native Python), and [`frontend/.env.example`](frontend/.env.example) (Vite). The launcher generates blank Docker secrets automatically; optional OpenRouter configuration is documented in the setup guide. Run `npm test`, `npm run test:api`, `npm run verify:local`, and `npm run verify:deployment` for the corresponding checks.
 
 For a native Python API instead, use Python 3.12, `backend/requirements.lock`, and `pip install -e '.[dev]'`. Copy `backend/.env.example` to `.env`, configure your own PostgreSQL URL and collector secret, run `python -m app.db`, then `python -m app.admin your@email.com` and `uvicorn app.main:app --port 8100`. The admin CLI prompts securely for a 14-character-or-longer password. Production does not create bootstrap accounts.
 

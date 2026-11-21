@@ -36,7 +36,7 @@ describe("public account entry", () => {
     fireEvent.click(google);
     await screen.findByText("Google sign-in is awaiting setup. You can use email below.");
     expect(attempts).toBe(2);
-    expect(screen.getByRole("button", { name: "Sign in", exact: true })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Sign in$/ })).toBeTruthy();
     expect(screen.queryByLabelText("Confirm password")).toBeNull();
   });
   it("offers working email entry while clearly disabling an unconfigured Google provider", async () => {

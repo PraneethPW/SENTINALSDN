@@ -85,7 +85,8 @@ export default function AuthPortal({
       registration: boolean;
       google: boolean;
     } | null>(null),
-    [configError, setConfigError] = useState(false);
+    [configError, setConfigError] = useState(false),
+    [configLoading, setConfigLoading] = useState(true);
   const [name, setName] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
@@ -101,14 +102,47 @@ export default function AuthPortal({
     void request<{ registration: boolean; google: boolean }>(
       "/api/auth/config",
       null,
-      { signal: c.signal },
+      { signal: AbortSignal.any([c.signal, AbortSignal.timeout(10000)]) },
     )
       .then(setConfig)
       .catch((e) => {
         if (e.name !== "AbortError") setConfigError(true);
+      })
+      .finally(() => {
+        if (!c.signal.aborted) setConfigLoading(false);
       });
     return () => c.abort();
   }, []);
+  async function googleSignIn() {
+    setBusy(true);
+    setError("");
+    let available = config;
+    if (!available) {
+      try {
+        available = await request<{ registration: boolean; google: boolean }>(
+          "/api/auth/config", null, { signal: AbortSignal.timeout(10000) },
+        );
+        setConfig(available);
+        setConfigError(false);
+      } catch {
+        setConfigError(true);
+        setError("We couldn’t connect to Google sign-in. Please try again shortly.");
+        setBusy(false);
+        return;
+      }
+    }
+    if (!available.google) {
+      setError("Google sign-in is awaiting setup. You can use email below.");
+      setBusy(false);
+      return;
+    }
+    try {
+      await beginGoogle();
+    } catch {
+      setError("Google sign-in needs browser storage and a secure connection. Please try email.");
+      setBusy(false);
+    }
+  }
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -166,16 +200,9 @@ export default function AuthPortal({
             </p>
             <button
               className="auth-google"
-              disabled={busy || !config?.google}
-              onClick={() => {
-                setBusy(true);
-                void beginGoogle().catch(() => {
-                  setError(
-                    "Google sign-in needs browser storage and a secure connection. Please try email.",
-                  );
-                  setBusy(false);
-                });
-              }}
+              type="button"
+              disabled={busy || configLoading || config?.google === false}
+              onClick={() => void googleSignIn()}
             >
               <GoogleMark />
               Continue with Google
@@ -187,8 +214,7 @@ export default function AuthPortal({
             ) : null}
             {configError ? (
               <p className="auth-provider-note" role="status">
-                Unable to check Google availability. Email sign-in can still be
-                attempted.
+                We couldn’t reach the sign-in service. Select Continue with Google to retry.
               </p>
             ) : null}
             <div className="auth-divider">

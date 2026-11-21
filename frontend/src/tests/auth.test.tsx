@@ -12,6 +12,33 @@ beforeEach(() => {
   call.mockResolvedValue({ registration: true, google: false });
 });
 describe("public account entry", () => {
+  it("keeps Google and the required email registration fields together", async () => {
+    call.mockResolvedValue({ registration: true, google: true });
+    render(<AuthPortal register />);
+    expect(screen.getByLabelText("Your name")).toBeTruthy();
+    expect(screen.getByLabelText("Email address")).toBeTruthy();
+    expect(screen.getByLabelText("Password", { exact: true })).toBeTruthy();
+    expect(screen.getByLabelText("Confirm password")).toBeTruthy();
+    await vi.waitFor(() => expect((screen.getByRole("button", { name: "Continue with Google" }) as HTMLButtonElement).disabled).toBe(false));
+    expect(screen.getByRole("button", { name: "Create account" })).toBeTruthy();
+  });
+  it("allows Google availability to be retried after an API outage", async () => {
+    let attempts = 0;
+    call.mockImplementation((path) => {
+      if (path === "/api/auth/config" && ++attempts === 1)
+        return Promise.reject(new Error("Service unavailable"));
+      return Promise.resolve({ registration: true, google: false });
+    });
+    render(<AuthPortal />);
+    await screen.findByText("We couldn’t reach the sign-in service. Select Continue with Google to retry.");
+    const google = screen.getByRole("button", { name: "Continue with Google" }) as HTMLButtonElement;
+    expect(google.disabled).toBe(false);
+    fireEvent.click(google);
+    await screen.findByText("Google sign-in is awaiting setup. You can use email below.");
+    expect(attempts).toBe(2);
+    expect(screen.getByRole("button", { name: "Sign in", exact: true })).toBeTruthy();
+    expect(screen.queryByLabelText("Confirm password")).toBeNull();
+  });
   it("offers working email entry while clearly disabling an unconfigured Google provider", async () => {
     render(<AuthPortal register />);
     const button = await screen.findByText(

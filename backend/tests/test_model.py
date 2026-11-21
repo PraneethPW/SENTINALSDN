@@ -7,6 +7,12 @@ from app.schemas import Flow
 from test_validation import sample
 
 
+def test_native_environment_example_trusts_the_committed_model():
+    example = dict(line.split("=", 1) for line in Path(".env.example").read_text().splitlines()
+                   if line and not line.startswith("#") and "=" in line)
+    assert example["MODEL_SHA256"] == hashlib.sha256(Path(example["MODEL_PATH"]).read_bytes()).hexdigest()
+
+
 def test_artifact_hash_mismatch_blocks_deserialization(monkeypatch):
     monkeypatch.setenv("MODEL_PATH", str(Path("artifacts/model.joblib").absolute()))
     monkeypatch.setenv("MODEL_SHA256", "0" * 64)

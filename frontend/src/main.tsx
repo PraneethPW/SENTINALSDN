@@ -7,6 +7,7 @@ import "./styles.css";
 import "./entry.css";
 import "./research.css";
 import "./cinematic.css";
+import "./cockpit.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

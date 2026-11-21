@@ -1,5 +1,13 @@
 # Railway + Neon + Vercel
 
+For local installation and the three environment example files, see [LOCAL_SETUP.md](LOCAL_SETUP.md).
+
+## Current external blocker (21 November 2026)
+
+Production verification found the frontend reachable, but Neon rejects database connections with **“Your account or project has exceeded the quota.”** The API cannot pass readiness or complete its startup migrations until the account/project quota is restored. A process restart does not resolve this provider limit. Restore available quota in Neon, then redeploy/restart the API and run `npm run verify:deployment`. Do not replace the production database with an empty one to hide this failure.
+
+The live revision poll now pauses when there are no WebSocket subscribers, reducing idle database work. Collectors and managed-host polling still use database resources while running. Check their operating schedule and the provider's resource usage before leaving a research lab online continuously.
+
 ## Neon
 
 Use a dedicated database/branch for this project. In the Neon console, select **Connect**, select the intended database and role, and copy the complete pooled PostgreSQL URL, including its actual password, `sslmode=require`, and `channel_binding=require`. A string containing asterisks cannot authenticate. Never put the URL in frontend settings or Git.

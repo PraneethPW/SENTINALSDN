@@ -1,9 +1,10 @@
-import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowDown, ArrowUpRight } from "lucide-react";
 import PublicHeader, { Brand } from "./components/PublicHeader";
 import { readSession } from "./session";
 import BenchmarkReference from "./components/BenchmarkReference";
 import { CinematicBackdrop, CinematicChapter } from "./components/CinematicScene";
 import { useMotionPreference } from "./motionPreference";
+import NetworkHologram from "./components/NetworkHologram";
 
 const method = [
   ["Capture", "OpenFlow switch counters", "The collector calculates packet and byte deltas from 30-second measurements."],
@@ -20,14 +21,14 @@ export default function Landing() {
       <main className="research-width research-main">
         <div className="project-overview">
           <section className="project-intro" aria-labelledby="project-title">
-            <p className="project-label">Final-year computer science project</p>
-            <h1 id="project-title">Machine Learning-Based DDoS Attack Detection in Software Defined Networks</h1>
+            <p className="project-label"><span className="cockpit-tag">SENTINEL / DEFENSE CONSOLE</span> SDN + MACHINE LEARNING</p>
+            <h1 id="project-title">See the signal.<br /><em>Command the network.</em></h1>
             <p className="project-description">
-              Sentinel reads OpenFlow counters and scores each 30-second flow window for DDoS activity. Run the classifier against published test data or upload a capture from your own network.
+              A new perspective on network defense. Inspect real OpenFlow telemetry, investigate DDoS detections, and put the model to the test in one immersive workspace.
             </p>
             <div className="research-actions">
-              <a className="research-button primary" href="/auth/sign-in#benchmark">Open Detection Lab <ArrowRight size={17} /></a>
-              <a className="research-button ghost" href="/auth/sign-in#upload-dataset">Test a CSV</a>
+              <a className="research-button primary" href="/lab#benchmark">Open Detection Lab</a>
+              <a className="research-button ghost" href="/auth/register">Create workspace</a>
             </div>
             <dl className="project-spec">
               <div><dt>Telemetry</dt><dd>OpenFlow 1.3</dd></div>
@@ -35,9 +36,17 @@ export default function Landing() {
               <div><dt>Window</dt><dd>30 seconds</dd></div>
             </dl>
           </section>
-          <div id="benchmark-evidence" className="landing-reference benchmark-embed">
-            <BenchmarkReference />
+          <div className="hero-visual">
+            <NetworkHologram />
+            <div className="hero-visual-caption"><span>OBSERVE · CLASSIFY · INVESTIGATE</span><span>30 SEC / WINDOW</span></div>
           </div>
+        </div>
+        <div className="mission-strip" aria-label="Project capabilities">
+          <span>Machine learning–based DDoS detection in software defined networks</span>
+          <span>Real telemetry</span><span>Private workspaces</span><span>Inspectable evidence</span>
+        </div>
+        <div id="benchmark-evidence" className="landing-reference benchmark-embed">
+          <BenchmarkReference action={<a href="/lab#benchmark" className="research-button ghost">Explore the benchmark</a>} />
         </div>
         <div className="project-scroll-link">
           <a className="research-text-link" href="#methodology"><ArrowDown size={15} /> How the detector works</a>

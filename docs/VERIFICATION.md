@@ -1,3 +1,21 @@
+# Cockpit and local setup verification — 21 November 2026
+
+This record describes the current checkout. Earlier records below are historical.
+
+- Backend: **86 tests** verified against dedicated PostgreSQL (85-test full integration run followed by the added environment-checksum regression test). Covers account/workspace isolation, collectors, model validation, uploads, investigations, managed labs, and subscriber-aware revision polling.
+- Frontend: **27 tests passed**, TypeScript and Vite production build passed. Vitest updated to 5.1.1; npm audit reports zero vulnerabilities.
+- Built and started the real Docker stack in a separate Compose project with isolated ports and volumes. Verified migrations, model loading, Nginx frontend routes, API proxy, CORS, and public model reference. Repeated startup preserved credentials and existing records.
+- Local verification passed with **3 switches**, **3 hosts**, **20 concurrent HTTP reads** (measured p95 324.2 ms), and **20 authenticated WebSocket subscriptions**. Viewer/operator restrictions and CSV flow export passed. These are measurements from this test machine, not service guarantees.
+- Browser: registered a fresh private account, confirmed its workspace initially had no inherited flows, started its private Mininet lab, observed actual flow windows, opened stored model-input evidence, inspected discovered switches, ran the 4,050-window benchmark, and scored a three-row test CSV. A header-only CSV produced a visible validation error. Stopped the private lab and verified email sign-in and sign-out.
+- Responsive checks exercised desktop (1440 px) and mobile (390 px), including authentication, incidents, topology, settings and benchmark results. Tested pages had no horizontal document overflow; wide telemetry tables scroll within their panels. Motion pause and the existing reduced-motion preference apply to the shared visual system.
+- Installation instructions and three `.env.example` files are documented in [LOCAL_SETUP.md](LOCAL_SETUP.md). The native backend example's stale model SHA-256 was corrected, and a regression test checks it against the committed artifact.
+- Production frontend routes and background assets returned HTTP 200. **Production API verification is blocked:** Neon rejects connections with “Your account or project has exceeded the quota.” Restarting the API confirmed the provider rejection during startup migrations. Restore account/project quota before rerunning the public deployment smoke check; production authentication and live telemetry cannot be marked passed.
+- Google OAuth and OpenRouter calls were not exercised with provider credentials in the isolated local stack. Both remain optional and visibly unavailable when not configured.
+
+Commands: `npm test`, `npm run build`, `TEST_DATABASE_URL=... npm run test:api`, `npm run verify:local`, `npm run verify:deployment`. Only the dedicated test database may be used for destructive integration fixtures.
+
+---
+
 # Workspace onboarding verification — Sentinel 1.3
 
 Verified 1 November 2026. This section supersedes the shared-workspace registration behavior documented in the historical 1.2 record below.

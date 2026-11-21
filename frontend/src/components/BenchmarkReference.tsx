@@ -6,7 +6,11 @@ import type { BenchmarkReference as Reference } from "../benchmark";
 
 let referenceRequest: Promise<Reference> | undefined;
 function loadReference() {
-  referenceRequest ??= request<Reference>("/api/benchmark/reference").catch((error: unknown) => {
+  referenceRequest ??= request<Reference>("/api/benchmark/reference").then(result => {
+    if (!result.dataset || !result.model || !Array.isArray(result.confusion_matrix))
+      throw new Error("Benchmark reference unavailable");
+    return result;
+  }).catch((error: unknown) => {
     referenceRequest = undefined;
     throw error;
   });
@@ -22,17 +26,16 @@ export default function BenchmarkReference({
 }) {
   const [reference, setReference] = useState<Reference | null>(null);
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
+    setFailed(false);
     void loadReference().then((result) => {
       if (!active) return;
-      if (!result.dataset || !result.model || !Array.isArray(result.confusion_matrix)) {
-        throw new Error("Benchmark reference unavailable");
-      }
       setReference(result);
     }).catch(() => { if (active) setFailed(true); });
     return () => { active = false; };
-  }, []);
+  }, [attempt]);
 
   const ready = reference !== null;
   const [[tn, fp], [fn, tp]] = reference?.confusion_matrix ?? [[0, 0], [0, 0]];
@@ -70,7 +73,7 @@ export default function BenchmarkReference({
         </>
       ) : (
         <p className="reference-limits" role="status">
-          {failed ? "Benchmark figures are unavailable." : "Loading saved benchmark figures…"}
+          {failed ? <>Benchmark figures are unavailable. <button className="research-text-link" onClick={() => setAttempt(value => value + 1)}>Try again</button></> : "Loading saved benchmark figures…"}
         </p>
       )}
     </section>

@@ -1,4 +1,4 @@
-import { ArrowUpRight, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import { readSession } from "../session";
 import { MotionToggle } from "./CinematicScene";
 
@@ -17,13 +17,13 @@ export default function PublicHeader() {
       <div className="research-width research-nav">
         <Brand />
         <nav aria-label="Project navigation">
-          <a href="/auth/sign-in#benchmark">Detection Lab</a>
+          <a href="/lab#benchmark">Detection Lab</a>
           <a href="/#benchmark-evidence">Model results</a>
         </nav>
         <div className="research-nav-actions">
           <MotionToggle />
           <a className="research-button ghost" href={readSession() ? "/app" : "/auth/sign-in"}>
-            Live workspace <ArrowUpRight size={15} />
+            {readSession() ? "Open console" : "Sign in"}
           </a>
         </div>
       </div>

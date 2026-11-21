@@ -294,10 +294,15 @@ function Privacy() {
 }
 export default function Root() {
   const path = location.pathname.replace(/\/$/, "") || "/";
+  useEffect(() => {
+    const labels: Record<string, string> = { "/": "Network Defense Cockpit", "/auth/sign-in": "Sign in", "/auth/register": "Create workspace", "/auth/callback": "Secure sign-in", "/app": "Live workspace", "/account": "Workspace access", "/lab": "Detection Lab", "/privacy": "Privacy" };
+    document.title = `${labels[path] ?? "Page not found"} | Sentinel SDN`;
+  }, [path]);
   if (path === "/auth/sign-in" || path === "/lab") return <AuthPortal />;
   if (path === "/auth/register") return <AuthPortal register />;
   if (path === "/auth/callback") return <Callback />;
   if (path === "/app" || path === "/account") return <WorkspaceGate />;
   if (path === "/privacy") return <Privacy />;
-  return <Landing />;
+  if (path === "/") return <Landing />;
+  return <EntryShell><p className="lp-kicker">ROUTE NOT FOUND / 404</p><h1>This sector is uncharted.</h1><p>The page you requested does not exist. Return home or open your workspace.</p><a className="lp-button" href="/">Return to Sentinel</a></EntryShell>;
 }

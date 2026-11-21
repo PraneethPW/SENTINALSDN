@@ -77,6 +77,8 @@ export function useNetwork(minutes: number) {
           }),
         ]);
         if (!active || logoutStarted.current) return;
+        if (!validSnapshot(snapshot))
+          throw new Error("The API returned an incomplete workspace snapshot. Please reconnect.");
         setUser(me);
         setData(snapshot);
         const url = new URL(`${API}/api/live`, window.location.origin);
@@ -183,10 +185,11 @@ export function useNetwork(minutes: number) {
     };
   }, [token, labId]);
   const refresh = async () => {
-    if (token)
-      setData(
-        await request<Snapshot>(`/api/snapshot?minutes=${minutes}`, token),
-      );
+    if (token) {
+      const snapshot = await request<Snapshot>(`/api/snapshot?minutes=${minutes}`, token);
+      if (!validSnapshot(snapshot)) throw new Error("The API returned an incomplete workspace snapshot.");
+      setData(snapshot);
+    }
   };
   return {
     token,

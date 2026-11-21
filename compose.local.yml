@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: sentinel
       POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:?Run npm run local:up}
     volumes: [database:/var/lib/postgresql/data]
-    ports: ['127.0.0.1:55432:5432']
+    ports: ['127.0.0.1:${LOCAL_DB_PORT:-55432}:5432']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U sentinel -d sentinel_local']
       interval: 3s
@@ -24,14 +24,16 @@ services:
       LAB_HOST_TOKEN: ${LOCAL_LAB_HOST_TOKEN:?Run npm run local:up}
       MODEL_SHA256: ${LOCAL_MODEL_SHA256}
       DETECTION_THRESHOLD: ${LOCAL_MODEL_THRESHOLD:-0.525}
-      CORS_ORIGINS: http://localhost:5180,http://127.0.0.1:5180,http://localhost:5173,http://127.0.0.1:5173
+      CORS_ORIGINS: http://localhost:${LOCAL_FRONTEND_PORT:-5180},http://127.0.0.1:${LOCAL_FRONTEND_PORT:-5180},http://localhost:5173,http://127.0.0.1:5173
       BOOTSTRAP_EMAIL: ${LOCAL_ADMIN_EMAIL}
       BOOTSTRAP_PASSWORD: ${LOCAL_ADMIN_PASSWORD}
       GOOGLE_CLIENT_ID: ${LOCAL_GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${LOCAL_GOOGLE_CLIENT_SECRET:-}
-      GOOGLE_REDIRECT_URI: http://localhost:5180/api/auth/google/callback
+      GOOGLE_REDIRECT_URI: http://localhost:${LOCAL_FRONTEND_PORT:-5180}/api/auth/google/callback
+      OPENROUTER_API_KEY: ${LOCAL_OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${LOCAL_OPENROUTER_MODEL:-openrouter/free}
       MITIGATION_ENABLED: 'false'
-    ports: ['127.0.0.1:8100:8000']
+    ports: ['127.0.0.1:${LOCAL_API_PORT:-8100}:8000']
     depends_on:
       postgres: {condition: service_healthy}
     healthcheck:
@@ -42,7 +44,7 @@ services:
   frontend:
     build: ./frontend
     restart: unless-stopped
-    ports: ['127.0.0.1:5180:80']
+    ports: ['127.0.0.1:${LOCAL_FRONTEND_PORT:-5180}:80']
     depends_on:
       api: {condition: service_healthy}
   lab:

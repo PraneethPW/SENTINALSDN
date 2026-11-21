@@ -16,6 +16,7 @@ import DetectionLab from "./DetectionLab";
 import BenchmarkReference from "./components/BenchmarkReference";
 import { CinematicBackdrop, CinematicChapter, MotionToggle } from "./components/CinematicScene";
 import { useMotionPreference } from "./motionPreference";
+import NetworkHologram from "./components/NetworkHologram";
 export type AuthResult = { token: string; user: User };
 const messages: Record<string, string> = {
   google_cancelled: "Google sign-in was cancelled. You can try again.",
@@ -156,6 +157,7 @@ export default function AuthPortal({
             </div>
           </header>
           <section className="auth-form-wrap">
+            <p className="cockpit-kicker"><LockKeyhole size={14} /> SECURE WORKSPACE ACCESS</p>
             <h1>{register ? "Create your workspace." : "Sign in to Sentinel."}</h1>
             <p className="auth-intro">
               {register
@@ -313,11 +315,17 @@ export default function AuthPortal({
             </p>
           </section>
         </div>
-        {register ? (
-          <CinematicChapter scene="rack" className="auth-register-reference benchmark-embed">
-            <BenchmarkReference action={<a href="/auth/sign-in#benchmark" className="research-button ghost">Open Detection Lab <ArrowRight size={16} /></a>} />
-          </CinematicChapter>
-        ) : <DetectionLab placement="sign-in" />}
+        <div className="auth-side">
+          <section className="auth-visual" aria-label="Your network command center">
+            <NetworkHologram />
+            <div><p className="cockpit-kicker">YOUR NETWORK. IN FOCUS.</p><h2>A clear view.<br /><em>A stronger defense.</em></h2><p>Private workspaces. Measured signals. Evidence behind every verdict.</p></div>
+          </section>
+          {register ? (
+            <CinematicChapter scene="rack" className="auth-register-reference benchmark-embed">
+              <BenchmarkReference action={<a href="/lab#benchmark" className="research-button ghost">Open Detection Lab</a>} />
+            </CinematicChapter>
+          ) : <DetectionLab placement="sign-in" />}
+        </div>
       </main>
     </div>
   );

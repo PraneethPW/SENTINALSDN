@@ -6,7 +6,7 @@
   "description": "Measured SDN telemetry, machine learning detection, and a live defense console.",
   "license": "MIT",
   "engines": {
-    "node": ">=22"
+    "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
   },
   "scripts": {
     "dev": "node scripts/local.mjs up",
@@ -18,7 +18,11 @@
     "local:status": "node scripts/local.mjs status",
     "local:logs": "node scripts/local.mjs logs",
     "local:credentials": "node scripts/local.mjs credentials",
-    "dev:ui": "npm --prefix frontend run dev"
+    "dev:ui": "npm --prefix frontend run dev",
+    "test": "npm --prefix frontend test",
+    "test:api": "cd backend && .venv/bin/python -m pytest -q",
+    "verify:local": "backend/.venv/bin/python scripts/verify_local.py",
+    "verify:deployment": "node scripts/check-deployment.mjs"
   },
   "devDependencies": {
     "railway": "3.16.0"

@@ -2,9 +2,9 @@
 
 For local installation and the three environment example files, see [LOCAL_SETUP.md](LOCAL_SETUP.md).
 
-## Current external blocker (21 November 2026)
+## Database availability and recovery
 
-Production verification found the frontend reachable, but Neon rejects database connections with **“Your account or project has exceeded the quota.”** Workspace readiness and startup migrations cannot complete until the account/project quota is restored. Public benchmark evaluation runs independently from the database; login, registration, and workspace routes return an explicit HTTP 503 while the database is unavailable. Startup retries the database connection every 30 seconds and applies migrations before reopening workspace routes. Restore available quota in Neon, then confirm `/health/ready` and run `npm run verify:deployment`. Do not replace the production database with an empty one to hide this failure.
+An earlier production outage was caused by Neon rejecting connections with **“Your account or project has exceeded the quota.”** The replacement Neon connection is configured in Railway, and the deployed application now passes full workspace readiness. During a future database outage, workspace readiness and startup migrations cannot complete until connectivity is restored. Public benchmark evaluation runs independently from the database; login, registration, and workspace routes return an explicit HTTP 503 while the database is unavailable. Startup retries the database connection every 30 seconds and applies migrations before reopening workspace routes. Restore available quota in Neon, then confirm `/health/ready` and run `npm run verify:deployment`. Do not replace the production database with an empty one to hide this failure.
 
 The live revision poll now pauses when there are no WebSocket subscribers, reducing idle database work. Collectors and managed-host polling still use database resources while running. Check their operating schedule and the provider's resource usage before leaving a research lab online continuously.
 

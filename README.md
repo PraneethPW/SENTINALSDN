@@ -79,7 +79,7 @@ Cloud hosting does not observe an arbitrary network automatically. A collector m
 
 ## Deployed workspace
 
-**21 November 2026:** the frontend is reachable, but the API is blocked by the production Neon account/project quota. See [deployment status and recovery](docs/DEPLOYMENT.md). The complete local Docker stack works independently of that provider limit.
+**21 November 2026:** production is verified against the replacement Neon connection: public benchmark execution, email registration/sign-in, private lab telemetry, history, export, and topology passed live checks. See [verification evidence](docs/VERIFICATION.md) and [database recovery behavior](docs/DEPLOYMENT.md).
 
 Frontend: https://sentinel-sdn.vercel.app/
 

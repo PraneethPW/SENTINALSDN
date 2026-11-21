@@ -1,3 +1,22 @@
+# Production recovery and browser verification — 21 November 2026
+
+This record supersedes the production quota blocker in the historical records below.
+
+- Connected the user-provided replacement Neon database through Railway variables. Application startup applied the additive migrations before exposing workspace routes. Connection credentials remain outside source control.
+- Railway deployment `eb0f877a-47c7-4631-be09-86eb72de233c` is online, running backend commit `22bcb6da61a702bf2fc97e5bb91e7cbb3bd32e51`. Both `/health/public` and `/health/ready` returned HTTP 200; public health reports `mode: full` and `workspace_ready: true`.
+- **Live browser checks on https://sentinel-sdn.vercel.app:** ran all 4,050 published windows; observed 1,428 true positives, 257 false negatives, 52 false positives, and 2,313 true negatives. Uploaded and scored a three-row CSV through the actual file picker. No browser console errors were captured during the benchmark run.
+- Registered a fresh production verification account through the UI and confirmed its private workspace initially had no inherited telemetry. Started a real Mininet lab through Network setup and observed new stored model verdicts through the authenticated live stream. Inspected five model inputs and the model version for an actual recorded flow.
+- Inspected **3 switches, 2 discovered links, and 3 hosts**, including actual switch port counters. Downloaded a CSV containing **15 stored flow records** and fetched **45 rows of persisted history** through the UI.
+- System settings showed the verification account in its own workspace. Stopped its private lab, signed out, signed back in with email/password, observed the connected console, and signed out again. Confirmed zero Google sign-in controls and zero benchmark-run controls on the sign-in page.
+- `npm run verify:deployment` passed all checks: public routes/assets, API liveness, authentication configuration/CORS, model reference, public evaluation readiness, and workspace database readiness.
+- **89 backend tests passed** against a dedicated disposable PostgreSQL database. New regressions cover real public model execution with a failed database, CORS-readable workspace 503 responses, migration/initialization ordering, and automatic recovery.
+- Built the production Dockerfile and ran that actual image against unreachable PostgreSQL: it scored all 4,050 windows, `/health/public` returned `public-evaluation-only`, and `/health/ready` remained HTTP 503. This protects public evaluation without representing an unavailable workspace as healthy.
+- The verification lab is stopped and its browser session revoked. The production managed-lab host remains running; new private labs still depend on the research Mac and Colima remaining awake.
+
+The backend is pinned to the verified commit. To release later backend changes, connect the service to the next reviewed commit or explicitly switch its Git source back to branch-following mode.
+
+---
+
 # Cockpit and local setup verification — 21 November 2026
 
 This record describes the current checkout. Earlier records below are historical.

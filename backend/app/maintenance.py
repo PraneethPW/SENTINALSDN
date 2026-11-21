@@ -45,7 +45,8 @@ async def retention_loop():
     await asyncio.sleep(60)
     while True:
         try:
-            await run_cleanup()
+            if db.pool:
+                await run_cleanup()
         except Exception:
             logger.exception("Retention job failed; retrying at the next hourly interval")
         await asyncio.sleep(3600)

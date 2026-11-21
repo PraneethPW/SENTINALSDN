@@ -8,7 +8,7 @@ from app.db import db
 from app.security import passwords
 
 
-async def main():
+async def ensure_local_account():
     if settings().environment == "production" or not os.getenv("BOOTSTRAP_PASSWORD"):
         return
     password = os.environ["BOOTSTRAP_PASSWORD"]
@@ -16,12 +16,16 @@ async def main():
     if len(password) < 14:
         raise ValueError("Bootstrap password must contain at least 14 characters")
     encoded = await asyncio.to_thread(passwords.hash, password)
+    await db.fetch(
+        "INSERT INTO users(id,email,password_hash,role) VALUES (%s,%s,%s,'admin') ON CONFLICT(email) DO NOTHING",
+        (uuid4(), email, encoded),
+    )
+
+
+async def main():
     await db.open()
     try:
-        await db.fetch(
-            "INSERT INTO users(id,email,password_hash,role) VALUES (%s,%s,%s,'admin') ON CONFLICT(email) DO NOTHING",
-            (uuid4(), email, encoded),
-        )
+        await ensure_local_account()
     finally:
         await db.close()
 

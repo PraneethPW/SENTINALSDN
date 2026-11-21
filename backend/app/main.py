@@ -15,7 +15,8 @@ from psycopg_pool import PoolTimeout
 from app.api import router
 from app.benchmark import router as benchmark_router
 from app.config import settings
-from app.db import db
+from app.db import db, apply_migrations
+from app.bootstrap import ensure_local_account
 from app.detector import detector
 from app.ingest import router as ingest_router
 from app.maintenance import retention_loop
@@ -40,16 +41,45 @@ class RedactTicket(logging.Filter):
 logging.getLogger("uvicorn.error").addFilter(RedactTicket())
 
 
+async def initialize_workspace():
+    if not settings().database_url:
+        return
+    await db.open()
+    await apply_migrations()
+    await ensure_local_account()
+    app.state.workspace_ready = True
+
+
+async def recover_workspace():
+    while not app.state.workspace_ready:
+        await asyncio.sleep(30)
+        try:
+            await initialize_workspace()
+        except (OperationalError, PoolTimeout):
+            await db.close()
+            logger.warning("Workspace database unavailable; public evaluation remains online")
+
+
 @asynccontextmanager
 async def lifespan(app):
-    await db.open()
+    app.state.workspace_ready = False
     await asyncio.to_thread(detector.load)
+    try:
+        await initialize_workspace()
+    except (OperationalError, PoolTimeout):
+        await db.close()
+        logger.warning("Workspace database unavailable; starting public evaluation only")
+    recovery = asyncio.create_task(recover_workspace()) if settings().database_url else None
     maintenance = asyncio.create_task(retention_loop())
     await hub.start()
     try:
         yield
     finally:
         await hub.stop()
+        if recovery:
+            recovery.cancel()
+            with suppress(asyncio.CancelledError):
+                await recovery
         maintenance.cancel()
         with suppress(asyncio.CancelledError):
             await maintenance
@@ -63,12 +93,7 @@ app = FastAPI(
     docs_url="/docs" if settings().environment != "production" else None,
     redoc_url=None,
 )
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings().origins,
-    allow_methods=["GET", "POST", "PATCH"],
-    allow_headers=["Authorization", "Content-Type"],
-)
+app.state.workspace_ready = False
 app.include_router(router)
 app.include_router(benchmark_router)
 app.include_router(ingest_router)
@@ -106,7 +131,11 @@ async def request_boundary(request, call_next):
 
     request._receive = limited_receive
     try:
-        response = await call_next(request)
+        stateless = request.url.path in ("/api/auth/config", "/api/public/overview") or request.url.path.startswith("/api/benchmark/")
+        if request.url.path.startswith("/api/") and not stateless and not app.state.workspace_ready:
+            response = JSONResponse({"detail": "Workspace services are temporarily unavailable. Please try again later."}, 503)
+        else:
+            response = await call_next(request)
     except HTTPException as error:
         response = JSONResponse({"detail": error.detail}, error.status_code)
     except (OperationalError, PoolTimeout):
@@ -136,13 +165,20 @@ async def request_boundary(request, call_next):
 
 @app.get("/health/live")
 async def live():
-    return {"status": "alive", "version": "1.4.0"}
+    return {"status": "alive", "version": "1.4.0", "workspace_ready": app.state.workspace_ready}
+
+
+@app.get("/health/public")
+async def public_ready():
+    status = {"ready": detector.model is not None, "workspace_ready": app.state.workspace_ready,
+              "mode": "full" if app.state.workspace_ready else "public-evaluation-only"}
+    return JSONResponse(status, 200 if status["ready"] else 503)
 
 
 @app.get("/health/ready")
 async def ready():
-    if not db.pool:
-        return JSONResponse({"ready": False, "reason": "Database not configured"}, 503)
+    if not app.state.workspace_ready or not db.pool:
+        return JSONResponse({"ready": False, "reason": "Workspace database unavailable"}, 503)
     await db.one("SELECT 1")
     return {"ready": True}
 
@@ -151,6 +187,9 @@ async def ready():
 async def live_socket(socket: WebSocket):
     if socket.headers.get("origin") not in settings().origins:
         await socket.close(code=4403)
+        return
+    if not app.state.workspace_ready:
+        await socket.close(code=1013)
         return
     ticket = socket.query_params.get("ticket", "")
     subscribed = False
@@ -201,3 +240,13 @@ async def live_socket(socket: WebSocket):
     finally:
         if subscribed:
             hub.subscribers = max(0, hub.subscribers - 1)
+
+
+# Keep CORS outside the error boundary so outage responses remain readable by
+# the deployed frontend instead of becoming misleading browser network errors.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings().origins,
+    allow_methods=["GET", "POST", "PATCH"],
+    allow_headers=["Authorization", "Content-Type"],
+)

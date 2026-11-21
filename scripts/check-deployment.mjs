@@ -22,6 +22,9 @@ await Promise.all([
   check('API liveness', api + '/health/live', async response => {
     if ((await response.json()).status !== 'alive') throw new Error('API is not alive');
   }),
+  check('public evaluation readiness', api + '/health/public', async response => {
+    if (!(await response.json()).ready) throw new Error('Public model evaluation is not ready');
+  }),
   check('database readiness', api + '/health/ready', async response => {
     if (!(await response.json()).ready) throw new Error('Database is not ready');
   }),

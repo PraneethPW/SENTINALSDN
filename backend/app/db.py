@@ -16,6 +16,8 @@ class Database:
     async def open(self):
         if not settings().database_url:
             return
+        if self.pool:
+            return
         self.pool = AsyncConnectionPool(
             settings().database_url,
             min_size=1,
@@ -24,12 +26,17 @@ class Database:
             kwargs={"row_factory": dict_row},
             timeout=8,
         )
-        await self.pool.open()
-        await self.pool.wait(timeout=15)
+        try:
+            await self.pool.open()
+            await self.pool.wait(timeout=15)
+        except BaseException:
+            await self.close()
+            raise
 
     async def close(self):
         if self.pool:
             await self.pool.close()
+            self.pool = None
 
     @asynccontextmanager
     async def connection(self):
@@ -70,8 +77,8 @@ class Database:
 db = Database()
 
 
-async def migrate():
-    await db.open()
+async def apply_migrations():
+    """Apply the schema on an already-open pool before serving workspace routes."""
     async with db.connection() as conn:
         await conn.execute("SELECT pg_advisory_xact_lock(739142010)")
         await conn.execute(Path(__file__).with_name("schema.sql").read_text())
@@ -82,7 +89,14 @@ async def migrate():
             ).fetchone()
             if not exists:
                 await conn.execute(path.read_text())
-    await db.close()
+
+
+async def migrate():
+    await db.open()
+    try:
+        await apply_migrations()
+    finally:
+        await db.close()
 
 
 if __name__ == "__main__":

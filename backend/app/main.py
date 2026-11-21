@@ -153,6 +153,7 @@ async def live_socket(socket: WebSocket):
         await socket.close(code=4403)
         return
     ticket = socket.query_params.get("ticket", "")
+    subscribed = False
     try:
         async with db.connection() as conn:
             cursor = await conn.execute(
@@ -171,6 +172,10 @@ async def live_socket(socket: WebSocket):
             return
         minutes = int(raw_minutes)
         await socket.accept()
+        if not hub.subscribers:
+            hub.cache.clear()
+        hub.subscribers += 1
+        subscribed = True
         while True:
             valid = await db.one(
                 "SELECT u.workspace_id FROM sessions s JOIN users u ON u.id=s.user_id WHERE token_hash=%s AND expires_at>now() AND u.active AND u.approved",
@@ -193,3 +198,6 @@ async def live_socket(socket: WebSocket):
             await socket.close(code=1011)
         except RuntimeError:
             pass
+    finally:
+        if subscribed:
+            hub.subscribers = max(0, hub.subscribers - 1)

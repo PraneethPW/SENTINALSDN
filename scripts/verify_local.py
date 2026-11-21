@@ -1,19 +1,19 @@
 """Exercise the actual isolated local stack; never reads or writes the deployed database."""
 
-import asyncio, json, secrets, time, statistics
+import asyncio, json, os, secrets, time
 from pathlib import Path
 import httpx, websockets
 
 root = Path(__file__).resolve().parents[1]
 env = dict(
     s.split("=", 1)
-    for s in (root / ".env.local-stack").read_text().splitlines()
+    for s in (root / os.getenv("SENTINEL_LOCAL_ENV_FILE", ".env.local-stack")).read_text().splitlines()
     if "=" in s
 )
 
 
 async def verify():
-    async with httpx.AsyncClient(base_url="http://localhost:8100", timeout=30) as c:
+    async with httpx.AsyncClient(base_url=f"http://127.0.0.1:{env.get('LOCAL_API_PORT', '8100')}", timeout=30) as c:
         login = await c.post(
             "/api/auth/login",
             json={
@@ -51,8 +51,8 @@ async def verify():
                 "ticket"
             ]
             async with websockets.connect(
-                "ws://localhost:8100/api/live?ticket=" + ticket,
-                origin="http://localhost:5180",
+                f"ws://127.0.0.1:{env.get('LOCAL_API_PORT', '8100')}/api/live?ticket=" + ticket,
+                origin=f"http://localhost:{env.get('LOCAL_FRONTEND_PORT', '5180')}",
             ) as ws:
                 frame = json.loads(await asyncio.wait_for(ws.recv(), 10))
                 assert frame["model"]["ready"]
@@ -60,6 +60,7 @@ async def verify():
 
         revisions = await asyncio.gather(*[subscribe() for _ in range(20)])
         private = root / "backend/work/local-qa.json"
+        private.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         accounts = json.loads(private.read_text()) if private.exists() else {}
         for role in ["viewer", "operator"]:
             email = f"qa-{role}@sentinel.local"

@@ -215,22 +215,32 @@ export async function request<T>(
   token?: string | null,
   options: RequestInit = {},
 ): Promise<T> {
-  const response = await fetch(`${API}${path}`, {
-    ...options,
-    signal: options.signal ?? AbortSignal.timeout(55000),
-    headers: {
-      ...(typeof options.body === "string" ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-  const data = await response.json().catch(() => ({}));
+  const headers = new Headers(options.headers);
+  if (typeof options.body === "string" && !headers.has("Content-Type"))
+    headers.set("Content-Type", "application/json");
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  let response: Response;
+  try {
+    response = await fetch(`${API}${path}`, {
+      ...options,
+      signal: options.signal
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(55000)])
+        : AbortSignal.timeout(55000),
+      headers,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw error;
+    throw new Error(error instanceof Error && error.name === "TimeoutError"
+      ? "The server took too long to respond. Please try again."
+      : "Unable to reach the API. Check your connection and backend configuration.");
+  }
+  const data = await response.json().catch(() => null);
   if (!response.ok)
     throw new ApiError(
       response.status,
-      typeof data.detail === "string"
+      typeof data?.detail === "string"
         ? data.detail
-        : Array.isArray(data.detail)
+        : Array.isArray(data?.detail)
           ? data.detail
               .slice(0, 3)
               .map((item: { msg?: string }) =>
@@ -241,6 +251,8 @@ export async function request<T>(
               .join(". ")
           : `Request failed (${response.status})`,
     );
+  if (data === null && response.status !== 204)
+    throw new Error("The API returned an invalid response. Check the API URL and proxy configuration.");
   return data as T;
 }
 

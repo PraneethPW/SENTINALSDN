@@ -24,17 +24,18 @@ privileged Mininet containers live inside the dedicated no-mount Colima Linux VM
 They share that trusted VM kernel; this is a bounded research service, not an
 arbitrary untrusted-code execution platform.
 
-The host service is installed automatically by `npm run local:up`. On macOS it
-uses the `com.sentinel-sdn.lab-host` user LaunchAgent (starts at login, restarts on
-failure); Linux uses a detached Python process (configure a service manager for
-restart across reboots). Python 3.9+ stdlib, Node 22+, Docker and Compose are
+The host starts automatically with `npm run local:up` as a checkout-scoped
+detached Python process on macOS and Linux. Its PID and logs stay under
+`backend/work/lab-host`; `local:down` drains its jobs and stops it. No login
+service is installed. Run `local:up` again after rebooting. Python 3.9+ stdlib,
+Node 22+, Docker and Compose are
 required. The host only builds the trusted image after its source fingerprint
 changes. Local core services and the local lab source work independently of
 Railway, Neon, Vercel and OpenRouter. Initial image downloads require internet.
 
 Private configuration: `backend/work/lab-host/config.json` (0600 in a 0700 folder).
 It lists API endpoints, host tokens, Docker context and total capacity. Never
-commit this file. `scripts/lab-host.mjs` restarts the configured service. Logs are
+commit this file. `scripts/lab-host.mjs` starts the configured host if needed. Logs are
 in the same private directory; image build output is in `image-build.log`.
 The production endpoint must use the same long random `LAB_HOST_TOKEN` in Railway
 and this private configuration; the local launcher generates its own independent

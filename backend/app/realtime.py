@@ -17,6 +17,7 @@ class LiveHub:
         self.task = None
         self.locks = {}
         self.last_tick = 0
+        self.subscribers = 0
 
     async def start(self):
         self.cache = {}
@@ -24,6 +25,7 @@ class LiveHub:
         self.changed = asyncio.Condition()
         self.revision = -1
         self.last_tick = 0
+        self.subscribers = 0
         self.task = asyncio.create_task(self.run())
 
     async def stop(self):
@@ -40,7 +42,9 @@ class LiveHub:
 
         while True:
             try:
-                if not db.pool:
+                # A permanent revision poll keeps serverless PostgreSQL awake even
+                # when nobody is using the console. Resume on the first subscriber.
+                if not db.pool or not self.subscribers:
                     await asyncio.sleep(1)
                     continue
                 row = await db.one("SELECT COALESCE(max(id),0) AS revision FROM realtime_events")

@@ -79,6 +79,8 @@ Cloud hosting does not observe an arbitrary network automatically. A collector m
 
 ## Deployed workspace
 
+**21 November 2026:** the frontend is reachable, but the API is blocked by the production Neon account/project quota. See [deployment status and recovery](docs/DEPLOYMENT.md). The complete local Docker stack works independently of that provider limit.
+
 Frontend: https://sentinel-sdn.vercel.app/
 
 API readiness: https://api-production-5de58.up.railway.app/health/ready
@@ -87,7 +89,9 @@ The current live feed comes from the real Mininet/OVS lab on the development Mac
 
 ## Run locally
 
-Requirements: Node 22+, Python 3.9+, Docker and Docker Compose. On macOS install the reputable packages with `brew install colima docker docker-compose`. The launcher starts a separate Colima profile named `sentinel-sdn` (4 CPUs, 6 GiB RAM) without changing your existing Docker context. Linux uses the default Docker context; set `SENTINEL_DOCKER_CONTEXT` to override.
+See the complete [installation, environment files, development and testing guide](docs/LOCAL_SETUP.md).
+
+Requirements: Node 22.12+, Python 3.9+, Docker and Docker Compose v2. On macOS install with `brew install colima docker docker-compose`, or use Docker Desktop. The launcher uses a working Docker context; if none is available on macOS it starts a separate Colima profile named `sentinel-sdn` (4 CPUs, 6 GiB RAM). Set `SENTINEL_DOCKER_CONTEXT` to override.
 
 ```bash
 git clone https://github.com/PraneethPW/SENTINALSDN.git
@@ -110,7 +114,9 @@ npm --prefix frontend ci
 npm run dev:ui
 ```
 
-The hot-reload frontend proxies API and WebSocket requests to the local API on port 8100, including when Vercel environment files are present. The Docker frontend uses its own same-origin proxy. Never put database credentials, collector secrets or provider keys in `VITE_*` variables.
+The hot-reload frontend proxies API and WebSocket requests to the local API on port 8100 when `VITE_API_URL` is empty. Copy `frontend/.env.example` to `frontend/.env.local`; use `API_PROXY_TARGET` for a different local API port. An explicit `VITE_API_URL` is honored in development and production. The Docker frontend uses its own same-origin proxy. Never put database credentials, collector secrets or provider keys in `VITE_*` variables.
+
+Environment examples are committed at [`.env.example`](.env.example) (Docker), [`backend/.env.example`](backend/.env.example) (native Python), and [`frontend/.env.example`](frontend/.env.example) (Vite). The launcher generates blank Docker secrets automatically; optional Google and OpenRouter configuration is documented in the setup guide. Run `npm test`, `npm run test:api`, `npm run verify:local`, and `npm run verify:deployment` for the corresponding checks.
 
 For a native Python API instead, use Python 3.12, `backend/requirements.lock`, and `pip install -e '.[dev]'`. Copy `backend/.env.example` to `.env`, configure your own PostgreSQL URL and collector secret, run `python -m app.db`, then `python -m app.admin your@email.com` and `uvicorn app.main:app --port 8100`. The admin CLI prompts securely for a 14-character-or-longer password. Production does not create bootstrap accounts.
 
